@@ -1,0 +1,21 @@
+{{!
+    @template mod_aiescape/completion
+
+    Completion banner shown when the scenario ends successfully.
+
+    Context variables:
+    * title - completion heading string
+    * message - completion detail string
+    * newattempturl - URL to start a new attempt (empty string if no more attempts allowed)
+    * newattemptlabel - label for the new attempt button
+}}
+<div class="alert alert-success d-flex align-items-center gap-3 mt-3" role="alert">
+    <i class="fa fa-check-circle fa-2x" aria-hidden="true"></i>
+    <div>
+        <strong>{{title}}</strong>
+        <p class="mb-0">{{message}}</p>
+    </div>
+</div>
+{{#newattempturl}}
+<a href="{{newattempturl}}" class="btn btn-primary mt-2">{{newattemptlabel}}</a>
+{{/newattempturl}}

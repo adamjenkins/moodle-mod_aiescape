@@ -1,0 +1,16 @@
+{{!
+    @template mod_aiescape/message
+
+    A single message bubble in the chat log.
+
+    Context variables:
+    * role - 'user' or 'assistant'
+    * message - message text (plain text, will be escaped)
+    * isuser - boolean
+}}
+<div class="aiescape-message d-flex mb-2 {{#isuser}}justify-content-end{{/isuser}}{{^isuser}}justify-content-start{{/isuser}}">
+    <div class="card {{#isuser}}text-bg-primary{{/isuser}}{{^isuser}}bg-light{{/isuser}} p-2 px-3"
+         style="max-width: 80%; border-radius: 1rem;">
+        <p class="mb-0" style="white-space: pre-wrap;">{{message}}</p>
+    </div>
+</div>

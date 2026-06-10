@@ -1,0 +1,99 @@
+{{!
+    @template mod_aiescape/view
+
+    Main game interface container.
+
+    Context variables required for this template:
+    * cmid - course module id
+    * gamemode - multichoice, freetext, or combo
+    * showprogress - boolean
+    * steps - int
+    * ismultichoice - boolean
+    * isfreetext - boolean
+    * sendlabel - string
+    * waitinglabel - string
+    * progresslabel - string
+    * placeholder - string
+    * allowreview - boolean
+    * myattemptsurl - string
+    * myattemptslabel - string
+    * startlabel - string (Start Game or Continue)
+    * aiproviderlabel - string (optional AI info for teachers)
+    * quitlabel - string
+    * quitconfirm - string
+}}
+{{#aiproviderlabel}}
+<p class="text-muted small mb-2">
+    <span class="badge bg-secondary">AI</span> {{aiproviderlabel}}
+</p>
+{{/aiproviderlabel}}
+<div id="aiescape-start-screen" class="text-center py-5">
+    <button id="aiescape-start-btn" class="btn btn-primary btn-lg px-5">
+        {{startlabel}}
+    </button>
+</div>
+
+<div id="aiescape-game"
+     class="aiescape-game d-none"
+     data-cmid="{{cmid}}"
+     data-gamemode="{{gamemode}}"
+     data-steps="{{steps}}">
+
+    {{#showprogress}}
+    <div class="aiescape-progress mb-3" id="aiescape-progress-container" aria-live="polite">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <small class="text-muted" id="aiescape-progress-label">{{progresslabel}}</small>
+        </div>
+        <div class="progress" style="height: 1.25rem;" role="progressbar"
+             aria-valuenow="0" aria-valuemin="0" aria-valuemax="{{steps}}">
+            <div class="progress-bar bg-success" id="aiescape-progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
+    {{/showprogress}}
+
+    <div id="aiescape-chatlog"
+         class="aiescape-chatlog border rounded p-3 mb-3"
+         style="min-height: 300px; max-height: 500px; overflow-y: auto;"
+         aria-live="polite"
+         aria-label="{{# str }} attempts, mod_aiescape {{/ str }}">
+    </div>
+
+    <div id="aiescape-loading" class="text-center py-2 d-none" aria-live="assertive">
+        <div class="spinner-border spinner-border-sm text-secondary me-2" role="status">
+            <span class="visually-hidden">{{waitinglabel}}</span>
+        </div>
+        <span class="text-muted">{{waitinglabel}}</span>
+    </div>
+
+    <div id="aiescape-choices" class="aiescape-choices d-flex gap-2 flex-wrap mb-3 d-none"></div>
+
+    {{#isfreetext}}
+    <div id="aiescape-freetext-area" class="input-group mb-3">
+        <textarea id="aiescape-freetext"
+                  class="form-control"
+                  rows="2"
+                  placeholder="{{placeholder}}"
+                  aria-label="{{placeholder}}"></textarea>
+        <button id="aiescape-send-btn"
+                class="btn btn-primary"
+                type="button">{{sendlabel}}</button>
+    </div>
+    {{/isfreetext}}
+
+    <div id="aiescape-buttons" class="aiescape-buttons d-flex gap-2 flex-wrap mb-2"></div>
+
+    <div class="text-end mb-2">
+        <button id="aiescape-quit-btn"
+                class="btn btn-sm btn-outline-secondary"
+                data-confirm="{{quitconfirm}}">{{quitlabel}}</button>
+    </div>
+
+    <div id="aiescape-completion" class="d-none"></div>
+
+    {{#allowreview}}
+    <div class="mt-3">
+        <a href="{{myattemptsurl}}" class="btn btn-link btn-sm">{{myattemptslabel}}</a>
+    </div>
+    {{/allowreview}}
+
+</div>

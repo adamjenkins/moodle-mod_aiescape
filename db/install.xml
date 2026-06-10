@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/aiescape/db" VERSION="2026061000" COMMENT="XMLDB file for Moodle mod/aiescape"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+  <TABLES>
+    <TABLE NAME="aiescape" COMMENT="Main table for AI Escape Room activity instances">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Course this activity belongs to"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false" COMMENT="Activity name"/>
+        <FIELD NAME="intro" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Activity description shown on course page"/>
+        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Format of the intro field"/>
+        <FIELD NAME="premise" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Story or character premise given to the AI"/>
+        <FIELD NAME="premiseformat" TYPE="int" LENGTH="4" NOTNULL="true" SEQUENCE="false" DEFAULT="1"/>
+        <FIELD NAME="goal" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Completion condition description for the AI"/>
+        <FIELD NAME="goalformat" TYPE="int" LENGTH="4" NOTNULL="true" SEQUENCE="false" DEFAULT="1"/>
+        <FIELD NAME="gamestyle" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" DEFAULT="narrative" COMMENT="narrative or persona"/>
+        <FIELD NAME="personaname" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" DEFAULT="" COMMENT="Character name for persona style"/>
+        <FIELD NAME="gamemode" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" DEFAULT="multichoice" COMMENT="multichoice, freetext, or combo"/>
+        <FIELD NAME="steps" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="10" COMMENT="Number of positive steps required to complete"/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="100" COMMENT="Maximum grade points awarded on completion"/>
+        <FIELD NAME="maxattempts" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="-1" COMMENT="Maximum attempts allowed; -1 means unlimited"/>
+        <FIELD NAME="showprogress" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="1" COMMENT="Whether to show step progress bar to student"/>
+        <FIELD NAME="allowstudentreview" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether students can review their own past attempts"/>
+        <FIELD NAME="partialscoreonquit" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Award partial score proportional to progress when student quits"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="course" TYPE="foreign" FIELDS="course" REFTABLE="course" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="aiescape_attempts" COMMENT="Per-student attempt records">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="aiescape" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Foreign key to aiescape table"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" DEFAULT="inprogress" COMMENT="inprogress, completed, abandoned"/>
+        <FIELD NAME="stepstally" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Running tally of steps towards goal"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp when attempt was completed"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="aiescape" TYPE="foreign" FIELDS="aiescape" REFTABLE="aiescape" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="aiescape_userid" UNIQUE="false" FIELDS="aiescape, userid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="aiescape_messages" COMMENT="Conversation message history per attempt">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="attemptid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Foreign key to aiescape_attempts"/>
+        <FIELD NAME="role" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="user or assistant"/>
+        <FIELD NAME="message" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Message content"/>
+        <FIELD NAME="choicetype" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="good, neutral, bad, or button label for user messages"/>
+        <FIELD NAME="stepchange" TYPE="int" LENGTH="4" NOTNULL="false" SEQUENCE="false" COMMENT="Step delta applied by this message: +1, 0, or -1"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="attemptid" TYPE="foreign" FIELDS="attemptid" REFTABLE="aiescape_attempts" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="attemptid_timecreated" UNIQUE="false" FIELDS="attemptid, timecreated"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="aiescape_buttons" COMMENT="Configurable secondary action buttons per activity">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="aiescape" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Foreign key to aiescape table"/>
+        <FIELD NAME="label" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Button label shown to student"/>
+        <FIELD NAME="prompt" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Prompt sent to AI when button is pressed"/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="defaultindex" TYPE="int" LENGTH="4" NOTNULL="false" SEQUENCE="false" COMMENT="1-5 index of global default button this was created from; null for custom buttons"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="aiescape" TYPE="foreign" FIELDS="aiescape" REFTABLE="aiescape" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>
