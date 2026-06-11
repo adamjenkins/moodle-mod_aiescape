@@ -89,7 +89,12 @@ class send_message extends external_api {
         require_capability('mod/aiescape:play', $context);
 
         $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance], '*', MUST_EXIST);
-        $attempt  = $DB->get_record('aiescape_attempts', ['id' => $attemptid, 'userid' => $USER->id], '*', MUST_EXIST);
+        $attempt  = $DB->get_record(
+            'aiescape_attempts',
+            ['id' => $attemptid, 'userid' => $USER->id, 'aiescape' => $aiescape->id],
+            '*',
+            MUST_EXIST
+        );
 
         if ($attempt->status === 'completed') {
             throw new \moodle_exception('error:invalidattempt', 'mod_aiescape');
@@ -142,7 +147,7 @@ class send_message extends external_api {
         $atman->record_message($attemptid, 'assistant', $parsed['narrative'], null, $stepchange);
 
         // Refresh attempt after tally update.
-        $attempt = $DB->get_record('aiescape_attempts', ['id' => $attemptid]);
+        $attempt = $DB->get_record('aiescape_attempts', ['id' => $attemptid, 'aiescape' => $aiescape->id]);
 
         // Complete when tally reaches the required number of steps.
         $completed = false;

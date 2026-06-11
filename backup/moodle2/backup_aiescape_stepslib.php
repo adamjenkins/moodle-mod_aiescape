@@ -40,14 +40,15 @@ class backup_aiescape_activity_structure_step extends backup_activity_structure_
             'name', 'intro', 'introformat',
             'premise', 'premiseformat',
             'goal', 'goalformat',
+            'gamestyle', 'personaname',
             'gamemode', 'steps', 'grade',
-            'maxattempts', 'showprogress', 'allowstudentreview',
+            'maxattempts', 'showprogress', 'allowstudentreview', 'partialscoreonquit',
             'timecreated', 'timemodified',
         ]);
 
         // Configurable buttons (not user data).
         $buttons = new backup_nested_element('buttons');
-        $button  = new backup_nested_element('button', ['id'], ['label', 'prompt', 'sortorder']);
+        $button  = new backup_nested_element('button', ['id'], ['label', 'prompt', 'sortorder', 'defaultindex']);
 
         // User attempt data.
         $attempts = new backup_nested_element('attempts');

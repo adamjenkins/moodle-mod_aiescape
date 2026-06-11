@@ -164,14 +164,30 @@ class response_parser {
     public function parse_button_response(string $responsetext): string {
         $responsetext = trim($responsetext);
         // phpcs:disable moodle.Strings.ForbiddenStrings.Found
-        $responsetext = preg_replace('/^```(?:json)?\s*/i', '', $responsetext);
-        $responsetext = preg_replace('/\s*```$/', '', $responsetext);
+        $stripped = preg_replace('/^```(?:json)?\s*/i', '', $responsetext);
+        $stripped = preg_replace('/\s*```$/', '', $stripped);
         // phpcs:enable moodle.Strings.ForbiddenStrings.Found
 
-        $data = json_decode($responsetext, true);
+        // Attempt 1: clean JSON object after stripping code fences.
+        $data = json_decode($stripped, true);
         if (is_array($data) && isset($data['narrative'])) {
             return (string) $data['narrative'];
         }
-        return $responsetext;
+
+        // Attempt 2: find the first {...} block anywhere in the response (AI added preamble text).
+        if (preg_match('/\{[^{}]*\}/s', $responsetext, $m)) {
+            $data = json_decode($m[0], true);
+            if (is_array($data) && isset($data['narrative'])) {
+                return (string) $data['narrative'];
+            }
+        }
+
+        // Attempt 3: extract the "narrative" string value directly via regex.
+        if (preg_match('/"narrative"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/s', $responsetext, $m)) {
+            return stripslashes($m[1]);
+        }
+
+        // Fallback: return stripped text as-is (better than raw JSON with braces).
+        return $stripped;
     }
 }

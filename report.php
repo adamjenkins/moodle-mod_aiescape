@@ -144,16 +144,31 @@ if ($userid) {
 // View 1: student list.
 echo $OUTPUT->heading(get_string('report', 'mod_aiescape'), 3);
 
-// Enrolled students (play capability) plus any non-enrolled user who has attempted (e.g. teacher testing).
-$enrolled = get_enrolled_users($context, 'mod/aiescape:play');
+// Extra identity fields (e.g. email, idnumber) based on site showuseridentity setting.
+$identityfields = \core_user\fields::get_identity_fields($context, false);
+
+// Fetch enrolled students (play cap) and anyone who has attempted.
+$enrolled = get_enrolled_users($context, 'mod/aiescape:play', 0, 'u.*');
+
+$baseuserfields = [
+    'id', 'firstname', 'lastname', 'email', 'firstnamephonetic', 'lastnamephonetic',
+    'middlename', 'alternatename', 'picture', 'imagealt', 'deleted',
+    'suspended', 'mnethostid', 'auth', 'confirmed',
+];
+$extraselect = '';
+foreach ($identityfields as $field) {
+    if (!in_array($field, $baseuserfields)) {
+        $extraselect .= ', u.' . $field;
+    }
+}
 
 $sql = "SELECT DISTINCT u.id, u.firstname, u.lastname, u.email, u.firstnamephonetic,
                u.lastnamephonetic, u.middlename, u.alternatename, u.picture,
                u.imagealt, u.deleted, u.suspended, u.mnethostid, u.auth, u.confirmed
+               {$extraselect}
           FROM {user} u
           JOIN {aiescape_attempts} aa ON aa.userid = u.id
-         WHERE aa.aiescape = :aiescape
-         ORDER BY u.lastname, u.firstname";
+         WHERE aa.aiescape = :aiescape";
 $attemptors = $DB->get_records_sql($sql, ['aiescape' => $aiescape->id]);
 
 $students = $enrolled + array_diff_key($attemptors, $enrolled);
@@ -164,32 +179,108 @@ if (empty($students)) {
     exit;
 }
 
-$table = new html_table();
-$table->head = [
-    get_string('student', 'mod_aiescape'),
-    get_string('attempts', 'mod_aiescape'),
-    get_string('completed', 'mod_aiescape'),
-    get_string('grade', 'mod_aiescape'),
-    get_string('lastattempt', 'mod_aiescape'),
-    '',
-];
-
+// Build per-student stats rows for sorting.
+$rows = [];
 foreach ($students as $student) {
     $userattempts = $atman->get_user_attempts($aiescape->id, $student->id);
     $numcompleted = count(array_filter($userattempts, fn($a) => $a->status === 'completed'));
-    $last         = !empty($userattempts) ? userdate(reset($userattempts)->timecreated) : '-';
-    $gradeinfo    = $numcompleted > 0 ? $aiescape->grade : '-';
-    $detailurl    = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id, 'userid' => $student->id]);
+    $numabandoned = count(array_filter($userattempts, fn($a) => $a->status === 'abandoned'));
+    $lasttimestamp = !empty($userattempts) ? reset($userattempts)->timecreated : 0;
 
-    $table->data[] = [
-        fullname($student),
-        count($userattempts),
-        $numcompleted,
-        $gradeinfo,
-        $last,
-        html_writer::link($detailurl, get_string('viewattempt', 'mod_aiescape'), ['class' => 'btn btn-sm btn-outline-primary']),
+    if ($numcompleted > 0) {
+        $gradevalue = (float) $aiescape->grade;
+    } else if ($aiescape->partialscoreonquit) {
+        $gradevalue = 0.0;
+        foreach ($userattempts as $a) {
+            if ($a->status === 'abandoned' && $aiescape->steps > 0) {
+                $partial = round($aiescape->grade * min(1.0, $a->stepstally / $aiescape->steps), 1);
+                $gradevalue = max($gradevalue, $partial);
+            }
+        }
+    } else {
+        $gradevalue = 0.0;
+    }
+
+    $rows[] = [
+        'student'    => $student,
+        'sortname'   => strtolower($student->lastname . ' ' . $student->firstname),
+        'attempts'   => count($userattempts),
+        'abandoned'  => $numabandoned,
+        'completed'  => $numcompleted,
+        'grade'      => $gradevalue,
+        'lastattempt' => $lasttimestamp,
     ];
 }
 
-echo html_writer::table($table);
+// Set up flexible_table for sortable headers.
+$table = new flexible_table('aiescape-report-' . $cm->id);
+$table->define_baseurl(new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id]));
+
+$columns = ['fullname'];
+$headers = [get_string('student', 'mod_aiescape')];
+foreach ($identityfields as $field) {
+    $columns[] = $field;
+    $headers[] = \core_user\fields::get_display_name($field);
+}
+$columns = array_merge($columns, ['attempts', 'abandoned', 'completed', 'grade', 'lastattempt', 'actions']);
+$headers = array_merge($headers, [
+    get_string('attempts', 'mod_aiescape'),
+    get_string('abandoned', 'mod_aiescape'),
+    get_string('completed', 'mod_aiescape'),
+    get_string('grademax', 'mod_aiescape', $aiescape->grade),
+    get_string('lastattempt', 'mod_aiescape'),
+    '',
+]);
+
+$table->define_columns($columns);
+$table->define_headers($headers);
+$table->sortable(true, 'fullname', SORT_ASC);
+$table->no_sorting('actions');
+foreach ($identityfields as $field) {
+    $table->no_sorting($field);
+}
+$table->setup();
+
+// Sort rows based on URL params set by flexible_table sort links.
+$tsort = optional_param('tsort', 'fullname', PARAM_ALPHANUMEXT);
+$tdir  = optional_param('tdir', SORT_ASC, PARAM_INT);
+
+usort($rows, function ($a, $b) use ($tsort, $tdir) {
+    $s = $a['student'];
+    $t = $b['student'];
+    $cmp = match ($tsort) {
+        'attempts'    => $a['attempts'] <=> $b['attempts'],
+        'abandoned'   => $a['abandoned'] <=> $b['abandoned'],
+        'completed'   => $a['completed'] <=> $b['completed'],
+        'grade'       => $a['grade'] <=> $b['grade'],
+        'lastattempt' => $a['lastattempt'] <=> $b['lastattempt'],
+        'firstname'   => strnatcasecmp($s->firstname . ' ' . $s->lastname, $t->firstname . ' ' . $t->lastname),
+        'lastname'    => strnatcasecmp($s->lastname . ' ' . $s->firstname, $t->lastname . ' ' . $t->firstname),
+        default       => strnatcasecmp($a['sortname'], $b['sortname']),
+    };
+    return ($tdir === SORT_DESC) ? -$cmp : $cmp;
+});
+
+foreach ($rows as $row) {
+    $student   = $row['student'];
+    $detailurl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id, 'userid' => $student->id]);
+
+    $cells = [fullname($student)];
+    foreach ($identityfields as $field) {
+        $cells[] = s($student->$field ?? '');
+    }
+    $cells[] = $row['attempts'] ?: '-';
+    $cells[] = $row['abandoned'] ?: '-';
+    $cells[] = $row['completed'] ?: '-';
+    $cells[] = $row['grade'] > 0 ? $row['grade'] : '-';
+    $cells[] = $row['lastattempt'] ? userdate($row['lastattempt']) : '-';
+    $cells[] = html_writer::link(
+        $detailurl,
+        get_string('viewattempt', 'mod_aiescape'),
+        ['class' => 'btn btn-sm btn-outline-primary']
+    );
+    $table->add_data($cells);
+}
+
+$table->finish_output();
 echo $OUTPUT->footer();

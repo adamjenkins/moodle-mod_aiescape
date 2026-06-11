@@ -68,7 +68,12 @@ class trigger_button extends external_api {
         require_capability('mod/aiescape:play', $context);
 
         $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance], '*', MUST_EXIST);
-        $attempt  = $DB->get_record('aiescape_attempts', ['id' => $attemptid, 'userid' => $USER->id], '*', MUST_EXIST);
+        $attempt  = $DB->get_record(
+            'aiescape_attempts',
+            ['id' => $attemptid, 'userid' => $USER->id, 'aiescape' => $aiescape->id],
+            '*',
+            MUST_EXIST
+        );
         $button   = $DB->get_record('aiescape_buttons', ['id' => $buttonid, 'aiescape' => $aiescape->id], '*', MUST_EXIST);
 
         // Find the last AI message for context.
