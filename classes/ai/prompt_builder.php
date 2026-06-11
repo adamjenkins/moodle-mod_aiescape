@@ -55,8 +55,12 @@ class prompt_builder {
         $name      = $ispersona ? $this->persona_name($aiescape) : '';
         $userprefix = $ispersona ? 'User' : 'Student';
 
+        $good    = max(0, (int) ($aiescape->choicesgood ?? 1));
+        $neutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
+        $bad     = max(0, (int) ($aiescape->choicesbad ?? 1));
+
         $parts = [];
-        $parts[] = $this->system_instructions($aiescape, $tally, $ispersona, $name);
+        $parts[] = $this->system_instructions($aiescape, $tally, $ispersona, $name, $good, $neutral, $bad);
         $parts[] = '--- CONVERSATION SO FAR ---';
         $parts[] = $this->serialise_history($messages, $ispersona, $name);
 
@@ -65,7 +69,7 @@ class prompt_builder {
         }
 
         $parts[] = '--- YOUR RESPONSE ---';
-        $parts[] = $this->output_format_instructions($aiescape->gamemode, $ispersona, $name);
+        $parts[] = $this->output_format_instructions($aiescape->gamemode, $ispersona, $name, $good, $neutral, $bad);
 
         return implode("\n\n", array_filter($parts, fn($p) => $p !== ''));
     }
@@ -105,6 +109,75 @@ class prompt_builder {
         return implode("\n", $lines);
     }
 
+    /**
+     * Builds a correction prompt when the AI returned the wrong number of choices.
+     *
+     * @param stdClass $aiescape      The activity record
+     * @param string   $narrative     The narrative from the previous AI response
+     * @param array    $actualchoices The choices the AI actually returned
+     * @return string
+     */
+    public function build_correction_prompt(
+        \stdClass $aiescape,
+        string $narrative,
+        array $actualchoices
+    ): string {
+        $ispersona = $this->is_persona($aiescape);
+        $name      = $ispersona ? $this->persona_name($aiescape) : '';
+        $choicehint = $ispersona
+            ? "what the student says to $name"
+            : 'choice text describing an action or decision';
+
+        $good    = max(0, (int) ($aiescape->choicesgood ?? 1));
+        $neutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
+        $bad     = max(0, (int) ($aiescape->choicesbad ?? 1));
+
+        $counts = ['good' => 0, 'neutral' => 0, 'bad' => 0];
+        foreach ($actualchoices as $c) {
+            $type = $c['type'] ?? '';
+            if (isset($counts[$type])) {
+                $counts[$type]++;
+            }
+        }
+
+        $lines = [];
+        if ($ispersona && $name !== '') {
+            $lines[] = "You are $name, continuing an interactive educational activity.";
+        } else {
+            $lines[] = 'You are running an interactive AI Escape Room activity.';
+        }
+        $lines[] = '';
+        $lines[] = 'Your last narrative response was:';
+        $lines[] = $narrative;
+        $lines[] = '';
+        $lines[] = 'The choices you provided did not match the required counts.';
+        $lines[] = sprintf(
+            'Required: %d good, %d neutral, %d bad. You provided: %d good, %d neutral, %d bad.',
+            $good,
+            $neutral,
+            $bad,
+            $counts['good'],
+            $counts['neutral'],
+            $counts['bad']
+        );
+        $lines[] = '';
+        $lines[] = 'Please provide ONLY the corrected choices as a JSON object.';
+        $lines[] = 'The choices must fit naturally with the narrative above.';
+        $lines[] = 'Respond with ONLY valid JSON — no markdown, no extra text:';
+        $lines[] = '{';
+        $lines[] = '  "choices": [';
+
+        $schemalines = $this->build_choices_schema($choicehint, $good, $neutral, $bad);
+        foreach ($schemalines as $idx => $sl) {
+            $lines[] = $sl . ($idx < count($schemalines) - 1 ? ',' : '');
+        }
+
+        $lines[] = '  ]';
+        $lines[] = '}';
+
+        return implode("\n", $lines);
+    }
+
     // Private helpers.
 
     /**
@@ -128,7 +201,10 @@ class prompt_builder {
         \stdClass $aiescape,
         int $tally,
         bool $ispersona,
-        string $name
+        string $name,
+        int $good,
+        int $neutral,
+        int $bad
     ): string {
         $mode      = $aiescape->gamemode;
         $steps     = (int) $aiescape->steps;
@@ -180,22 +256,8 @@ class prompt_builder {
         $lines[] = 'GAME MODE: ' . $mode;
 
         if ($mode === self::MODE_MULTICHOICE || $mode === self::MODE_COMBO) {
-            if ($ispersona) {
-                $lines[] = "- After your response as $name, always provide exactly 3 dialogue options the student can say to you.";
-                $lines[] = '- One option must be type "good" — moves toward the goal'
-                    . ' (the right question, flattery, a correct insight, effective persuasion).';
-                $lines[] = '- One option must be type "neutral" — neither helps nor hinders.';
-                $lines[] = '- One option must be type "bad" — moves away from the goal'
-                    . ' (wrong, confrontational, or unhelpful).';
-                $lines[] = '- Options MUST be words the student speaks directly to you,'
-                    . ' written in first person (e.g. "Tell me more about...", "I think you\'re lying").';
-                $lines[] = '- Options must NOT describe actions; they are spoken dialogue only.';
-            } else {
-                $lines[] = '- After your narrative, always provide exactly 3 choices for the student.';
-                $lines[] = '- One choice must be type "good" (moves toward the goal).';
-                $lines[] = '- One choice must be type "neutral" (does not help or hinder).';
-                $lines[] = '- One choice must be type "bad" (moves away from the goal).';
-                $lines[] = '- Choices should fit naturally within the story context.';
+            foreach ($this->choices_instructions($ispersona, $name, $good, $neutral, $bad) as $l) {
+                $lines[] = $l;
             }
         }
 
@@ -222,6 +284,82 @@ class prompt_builder {
     }
 
     /**
+     * Returns the lines describing required choice counts for the system instructions.
+     *
+     * @param bool   $ispersona
+     * @param string $name
+     * @param int    $good
+     * @param int    $neutral
+     * @param int    $bad
+     * @return string[]
+     */
+    private function choices_instructions(
+        bool $ispersona,
+        string $name,
+        int $good,
+        int $neutral,
+        int $bad
+    ): array {
+        $total     = $good + $neutral + $bad;
+        $typelist  = $this->type_count_summary($good, $neutral, $bad);
+        $choiceword = $ispersona ? 'dialogue option' : 'choice';
+        $choicewords = $ispersona ? 'dialogue options' : 'choices';
+
+        $lines = [];
+        $noun  = $total === 1 ? $choiceword : $choicewords;
+        if ($ispersona) {
+            $lines[] = "- After your response as $name, always provide exactly $total $noun: $typelist.";
+            if ($good > 0) {
+                $lines[] = '- "good" options move toward the goal'
+                    . ' (the right question, flattery, a correct insight, effective persuasion).';
+            }
+            if ($neutral > 0) {
+                $lines[] = '- "neutral" options neither help nor hinder.';
+            }
+            if ($bad > 0) {
+                $lines[] = '- "bad" options move away from the goal (wrong, confrontational, or unhelpful).';
+            }
+            $lines[] = '- All options MUST be words the student speaks directly to you,'
+                . ' written in first person (e.g. "Tell me more about...", "I think you\'re lying").';
+            $lines[] = '- Options must NOT describe actions; they are spoken dialogue only.';
+        } else {
+            $lines[] = "- After your narrative, always provide exactly $total $noun: $typelist.";
+            if ($good > 0) {
+                $lines[] = '- "good" choices move toward the goal.';
+            }
+            if ($neutral > 0) {
+                $lines[] = '- "neutral" choices do not help or hinder.';
+            }
+            if ($bad > 0) {
+                $lines[] = '- "bad" choices move away from the goal.';
+            }
+            $lines[] = '- Choices should fit naturally within the story context.';
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Returns a human-readable summary of required type counts, e.g. "2 good, 1 neutral, 0 bad".
+     */
+    private function type_count_summary(int $good, int $neutral, int $bad): string {
+        $parts = [];
+        if ($good > 0) {
+            $parts[] = $good . ' ' . ($good === 1 ? '"good"' : '"good"');
+        }
+        if ($neutral > 0) {
+            $parts[] = $neutral . ' ' . ($neutral === 1 ? '"neutral"' : '"neutral"');
+        }
+        if ($bad > 0) {
+            $parts[] = $bad . ' ' . ($bad === 1 ? '"bad"' : '"bad"');
+        }
+        if (empty($parts)) {
+            return '0 choices';
+        }
+        return implode(', ', $parts);
+    }
+
+    /**
      * Serialises conversation history into the prompt.
      */
     private function serialise_history(array $messages, bool $ispersona, string $name): string {
@@ -245,7 +383,14 @@ class prompt_builder {
     /**
      * Returns the JSON output format instructions for the given game mode and style.
      */
-    private function output_format_instructions(string $mode, bool $ispersona, string $name): string {
+    private function output_format_instructions(
+        string $mode,
+        bool $ispersona,
+        string $name,
+        int $good,
+        int $neutral,
+        int $bad
+    ): string {
         $narrativehint = $ispersona
             ? "what $name says, written as direct speech in the first person"
             : 'your story response as plain text';
@@ -266,13 +411,37 @@ class prompt_builder {
         } else {
             $lines[] = '  "stepchange": <1|0|-1>,';
             $lines[] = '  "choices": [';
-            $lines[] = "    {\"label\": \"<$choicehint>\", \"type\": \"good\"},";
-            $lines[] = "    {\"label\": \"<$choicehint>\", \"type\": \"neutral\"},";
-            $lines[] = "    {\"label\": \"<$choicehint>\", \"type\": \"bad\"}";
+            $schemalines = $this->build_choices_schema($choicehint, $good, $neutral, $bad);
+            foreach ($schemalines as $idx => $sl) {
+                $lines[] = $sl . ($idx < count($schemalines) - 1 ? ',' : '');
+            }
             $lines[] = '  ]';
             $lines[] = '}';
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Returns an array of JSON schema lines for the choices array, one entry per required choice.
+     *
+     * @param string $choicehint  Description hint for label placeholder
+     * @param int    $good
+     * @param int    $neutral
+     * @param int    $bad
+     * @return string[]
+     */
+    private function build_choices_schema(string $choicehint, int $good, int $neutral, int $bad): array {
+        $lines = [];
+        for ($i = 0; $i < $good; $i++) {
+            $lines[] = "    {\"label\": \"<$choicehint>\", \"type\": \"good\"}";
+        }
+        for ($i = 0; $i < $neutral; $i++) {
+            $lines[] = "    {\"label\": \"<$choicehint>\", \"type\": \"neutral\"}";
+        }
+        for ($i = 0; $i < $bad; $i++) {
+            $lines[] = "    {\"label\": \"<$choicehint>\", \"type\": \"bad\"}";
+        }
+        return $lines;
     }
 }

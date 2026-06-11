@@ -135,9 +135,43 @@ class send_message extends external_api {
             throw new \moodle_exception('error:aifailed', 'mod_aiescape');
         }
 
+        $choicesgood    = max(1, (int) ($aiescape->choicesgood ?? 1));
+        $choicesneutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
+        $choicesbad     = max(0, (int) ($aiescape->choicesbad ?? 1));
+
         $rawtext = $airesponse->get_response_data()['generatedcontent'] ?? '';
         $parser  = new response_parser();
-        $parsed  = $parser->parse($rawtext, $aiescape->gamemode);
+        $parsed  = $parser->parse($rawtext, $aiescape->gamemode, $choicesgood, $choicesneutral, $choicesbad);
+
+        // If multichoice/combo choices don't match expected counts, ask the AI to correct them.
+        if (
+            ($aiescape->gamemode === 'multichoice' || $aiescape->gamemode === 'combo') &&
+            !$parser->choices_match_expected($parsed['choices'], $choicesgood, $choicesneutral, $choicesbad)
+        ) {
+            $correctionprompt = $builder->build_correction_prompt(
+                $aiescape,
+                $parsed['narrative'],
+                $parsed['choices']
+            );
+            $correctionaction = new \core_ai\aiactions\generate_text(
+                contextid: $context->id,
+                userid: $USER->id,
+                prompttext: $correctionprompt
+            );
+            $correctionresponse = $aimanager->process_action($correctionaction);
+            if ($correctionresponse->get_success()) {
+                $correctiontext  = $correctionresponse->get_response_data()['generatedcontent'] ?? '';
+                $correctedchoices = $parser->parse_correction_response(
+                    $correctiontext,
+                    $choicesgood,
+                    $choicesneutral,
+                    $choicesbad
+                );
+                if (!empty($correctedchoices)) {
+                    $parsed['choices'] = $correctedchoices;
+                }
+            }
+        }
 
         // Apply step change (prefer AI-evaluated for freetext; preset for choices).
         $stepchange = ($presetchange !== null) ? $presetchange : $parsed['stepchange'];

@@ -74,5 +74,26 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026061003, 'aiescape');
     }
 
+    if ($oldversion < 2026061004) {
+        $table = new xmldb_table('aiescape');
+
+        $field = new xmldb_field('choicesgood', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1', 'gamemode');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('choicesneutral', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1', 'choicesgood');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('choicesbad', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1', 'choicesneutral');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026061004, 'aiescape');
+    }
+
     return true;
 }

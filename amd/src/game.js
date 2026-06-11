@@ -404,7 +404,10 @@ function(Ajax, Notification, Templates, Str) {
         });
     };
 
-    /** Shows the loading spinner and marks the UI as busy. */
+    /**
+     * Shows the loading spinner and marks the UI as busy.
+     * @param {boolean} state True to show loading, false to hide.
+     */
     var setLoading = function(state) {
         busy = state;
         var el = document.getElementById('aiescape-loading');

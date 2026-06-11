@@ -17,6 +17,9 @@
         <FIELD NAME="gamestyle" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" DEFAULT="narrative" COMMENT="narrative or persona"/>
         <FIELD NAME="personaname" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" DEFAULT="" COMMENT="Character name for persona style"/>
         <FIELD NAME="gamemode" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" DEFAULT="multichoice" COMMENT="multichoice, freetext, or combo"/>
+        <FIELD NAME="choicesgood" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="1" COMMENT="Number of good choices per turn in multichoice/combo mode"/>
+        <FIELD NAME="choicesneutral" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="1" COMMENT="Number of neutral choices per turn in multichoice/combo mode"/>
+        <FIELD NAME="choicesbad" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="1" COMMENT="Number of bad choices per turn in multichoice/combo mode"/>
         <FIELD NAME="steps" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="10" COMMENT="Number of positive steps required to complete"/>
         <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="100" COMMENT="Maximum grade points awarded on completion"/>
         <FIELD NAME="maxattempts" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="-1" COMMENT="Maximum attempts allowed; -1 means unlimited"/>

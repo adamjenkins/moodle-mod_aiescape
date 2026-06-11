@@ -103,6 +103,24 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $mform->setDefault('gamemode', 'multichoice');
         $mform->addHelpButton('gamemode', 'gamemode', 'mod_aiescape');
 
+        $mform->addElement('text', 'choicesgood', get_string('choicesgood', 'mod_aiescape'), ['size' => 3]);
+        $mform->setType('choicesgood', PARAM_INT);
+        $mform->setDefault('choicesgood', 1);
+        $mform->addHelpButton('choicesgood', 'choicesgood', 'mod_aiescape');
+        $mform->hideIf('choicesgood', 'gamemode', 'eq', 'freetext');
+
+        $mform->addElement('text', 'choicesneutral', get_string('choicesneutral', 'mod_aiescape'), ['size' => 3]);
+        $mform->setType('choicesneutral', PARAM_INT);
+        $mform->setDefault('choicesneutral', 1);
+        $mform->addHelpButton('choicesneutral', 'choicesneutral', 'mod_aiescape');
+        $mform->hideIf('choicesneutral', 'gamemode', 'eq', 'freetext');
+
+        $mform->addElement('text', 'choicesbad', get_string('choicesbad', 'mod_aiescape'), ['size' => 3]);
+        $mform->setType('choicesbad', PARAM_INT);
+        $mform->setDefault('choicesbad', 1);
+        $mform->addHelpButton('choicesbad', 'choicesbad', 'mod_aiescape');
+        $mform->hideIf('choicesbad', 'gamemode', 'eq', 'freetext');
+
         $mform->addElement('text', 'steps', get_string('steps', 'mod_aiescape'), ['size' => 5]);
         $mform->setType('steps', PARAM_INT);
         $mform->setDefault('steps', 10);
@@ -269,6 +287,24 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $steps = (int) ($data['steps'] ?? 0);
         if ($steps < 1 || $steps > 100) {
             $errors['steps'] = get_string('error:stepsinvalid', 'mod_aiescape');
+        }
+
+        if (($data['gamemode'] ?? 'multichoice') !== 'freetext') {
+            $good    = (int) ($data['choicesgood'] ?? 1);
+            $neutral = (int) ($data['choicesneutral'] ?? 1);
+            $bad     = (int) ($data['choicesbad'] ?? 1);
+
+            if ($good < 1) {
+                $errors['choicesgood'] = get_string('error:choicesgoodrequired', 'mod_aiescape');
+            } else if ($good > 5) {
+                $errors['choicesgood'] = get_string('error:choicescountinvalid', 'mod_aiescape');
+            }
+            if ($neutral < 0 || $neutral > 5) {
+                $errors['choicesneutral'] = get_string('error:choicescountinvalid', 'mod_aiescape');
+            }
+            if ($bad < 0 || $bad > 5) {
+                $errors['choicesbad'] = get_string('error:choicescountinvalid', 'mod_aiescape');
+            }
         }
 
         return $errors;

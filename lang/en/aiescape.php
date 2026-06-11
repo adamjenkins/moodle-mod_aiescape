@@ -50,6 +50,14 @@ $string['gamemode_help'] = 'Controls how students respond to the AI. Multichoice
 $string['gamemode_multichoice'] = 'Multiple choice';
 $string['gamemode_freetext'] = 'Free text';
 $string['gamemode_combo'] = 'Combo (buttons + text)';
+$string['choicesgood'] = 'Good choices per turn';
+$string['choicesgood_help'] = 'How many "good" choice buttons to offer each turn (each good choice adds one step toward the goal). Must be at least 1 in multiple choice or combo mode.';
+$string['choicesneutral'] = 'Neutral choices per turn';
+$string['choicesneutral_help'] = 'How many "neutral" choice buttons to offer each turn (neutral choices do not change the step tally). Set to 0 to omit neutral choices.';
+$string['choicesbad'] = 'Bad choices per turn';
+$string['choicesbad_help'] = 'How many "bad" choice buttons to offer each turn (each bad choice subtracts one step). Set to 0 to omit bad choices.';
+$string['error:choicesgoodrequired'] = 'At least one good choice is required in multiple choice or combo mode.';
+$string['error:choicescountinvalid'] = 'Choice count must be a whole number between 0 and 5.';
 $string['steps'] = 'Steps to complete';
 $string['steps_help'] = 'The number of positive steps needed to reach the goal. Good choices add one step, neutral choices add none, bad choices subtract one. The AI finishes the story when this tally is reached.';
 

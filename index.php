@@ -15,17 +15,15 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version metadata for mod_ai_escape_room.
+ * List of all aiescape instances in a course.
  *
  * @package    mod_aiescape
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+require_once('../../config.php');
 
-$plugin->component = 'mod_aiescape';
-$plugin->version   = 2026061004.00;
-$plugin->requires  = 2025042800.00; // Moodle 5.0.
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.1.0';
+$courseid = required_param('id', PARAM_INT);
+
+\core_courseformat\activityoverviewbase::redirect_to_overview_page($courseid, 'aiescape');

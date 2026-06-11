@@ -37,9 +37,18 @@ class response_parser {
      *
      * @param string $responsetext Raw text returned by the AI
      * @param string $gamemode     The current game mode
+     * @param int    $choicesgood    Expected number of good choices
+     * @param int    $choicesneutral Expected number of neutral choices
+     * @param int    $choicesbad     Expected number of bad choices
      * @return array {narrative, completed, stepchange, choices}
      */
-    public function parse(string $responsetext, string $gamemode): array {
+    public function parse(
+        string $responsetext,
+        string $gamemode,
+        int $choicesgood = 1,
+        int $choicesneutral = 1,
+        int $choicesbad = 1
+    ): array {
         $responsetext = trim($responsetext);
 
         // Strip markdown code fences if the AI wrapped the JSON.
@@ -74,11 +83,16 @@ class response_parser {
         ];
 
         if ($gamemode === 'multichoice' || $gamemode === 'combo') {
-            $result['choices'] = $this->parse_choices($data['choices'] ?? []);
+            $result['choices'] = $this->parse_choices(
+                $data['choices'] ?? [],
+                $choicesgood,
+                $choicesneutral,
+                $choicesbad
+            );
 
             // If we expected choices but got none, generate a safe fallback set.
             if (empty($result['choices'])) {
-                $result['choices'] = $this->default_choices();
+                $result['choices'] = $this->default_choices($choicesgood, $choicesneutral, $choicesbad);
             }
         }
 
@@ -86,18 +100,79 @@ class response_parser {
     }
 
     /**
+     * Returns true when the choices array matches the expected counts.
+     *
+     * @param array $choices       Parsed choices array
+     * @param int   $needgood
+     * @param int   $needneutral
+     * @param int   $needbad
+     * @return bool
+     */
+    public function choices_match_expected(
+        array $choices,
+        int $needgood,
+        int $needneutral,
+        int $needbad
+    ): bool {
+        $counts = ['good' => 0, 'neutral' => 0, 'bad' => 0];
+        foreach ($choices as $c) {
+            $type = $c['type'] ?? '';
+            if (isset($counts[$type])) {
+                $counts[$type]++;
+            }
+        }
+        return $counts['good'] === $needgood
+            && $counts['neutral'] === $needneutral
+            && $counts['bad'] === $needbad;
+    }
+
+    /**
+     * Parses a correction response that contains only a choices array.
+     *
+     * @param string $responsetext Raw text from the correction AI call
+     * @param int    $needgood
+     * @param int    $needneutral
+     * @param int    $needbad
+     * @return array  Validated choices, or empty array if still invalid
+     */
+    public function parse_correction_response(
+        string $responsetext,
+        int $needgood,
+        int $needneutral,
+        int $needbad
+    ): array {
+        $responsetext = trim($responsetext);
+        // phpcs:disable moodle.Strings.ForbiddenStrings.Found
+        $responsetext = preg_replace('/^```(?:json)?\s*/i', '', $responsetext);
+        $responsetext = preg_replace('/\s*```$/', '', $responsetext);
+        // phpcs:enable moodle.Strings.ForbiddenStrings.Found
+
+        $data = json_decode($responsetext, true);
+        if (is_array($data) && isset($data['choices'])) {
+            return $this->parse_choices($data['choices'], $needgood, $needneutral, $needbad);
+        }
+        return [];
+    }
+
+    /**
      * Parses and validates the choices array from the AI response.
      *
-     * @param mixed $raw Raw value from decoded JSON
+     * Accepts multiple choices of each type; takes exactly the needed count of each.
+     *
+     * @param mixed $raw          Raw value from decoded JSON
+     * @param int   $needgood
+     * @param int   $needneutral
+     * @param int   $needbad
      * @return array Array of validated ['label' => string, 'type' => string] items
      */
-    private function parse_choices($raw): array {
+    private function parse_choices($raw, int $needgood, int $needneutral, int $needbad): array {
         if (!is_array($raw)) {
             return [];
         }
 
-        $choices = [];
-        $seentypes = [];
+        $bygood    = [];
+        $byneutral = [];
+        $bybad     = [];
 
         foreach ($raw as $item) {
             if (!is_array($item)) {
@@ -110,34 +185,76 @@ class response_parser {
                 continue;
             }
 
-            // Only one of each type.
-            if (isset($seentypes[$type])) {
-                continue;
-            }
-
-            $seentypes[$type] = true;
-            $choices[] = ['label' => $label, 'type' => $type];
+            match ($type) {
+                'good'    => $bygood[]    = ['label' => $label, 'type' => 'good'],
+                'neutral' => $byneutral[] = ['label' => $label, 'type' => 'neutral'],
+                'bad'     => $bybad[]     = ['label' => $label, 'type' => 'bad'],
+            };
         }
 
-        // Must have exactly the three required types.
-        if (count($choices) !== 3 || array_diff(self::VALID_CHOICE_TYPES, array_keys($seentypes))) {
+        if (count($bygood) < $needgood || count($byneutral) < $needneutral || count($bybad) < $needbad) {
             return [];
+        }
+
+        $choices = [];
+        foreach (array_slice($bygood, 0, $needgood) as $c) {
+            $choices[] = $c;
+        }
+        foreach (array_slice($byneutral, 0, $needneutral) as $c) {
+            $choices[] = $c;
+        }
+        foreach (array_slice($bybad, 0, $needbad) as $c) {
+            $choices[] = $c;
         }
 
         return $choices;
     }
 
     /**
-     * Returns a safe default set of three choices when the AI fails to provide them.
+     * Returns a safe default set of choices when the AI fails to provide them.
      *
+     * @param int $good
+     * @param int $neutral
+     * @param int $bad
      * @return array
      */
-    private function default_choices(): array {
-        return [
-            ['label' => 'Proceed carefully', 'type' => 'good'],
-            ['label' => 'Wait and observe', 'type' => 'neutral'],
-            ['label' => 'Rush ahead blindly', 'type' => 'bad'],
+    private function default_choices(int $good = 1, int $neutral = 1, int $bad = 1): array {
+        $pool = [
+            'good'    => [
+                'Proceed carefully and look for clues',
+                'Investigate more thoroughly',
+                'Ask the right question',
+                'Make the smart decision',
+                'Take the best approach',
+            ],
+            'neutral' => [
+                'Wait and observe',
+                'Take a brief pause',
+                'Look around',
+                'Consider the options',
+                'Think it over',
+            ],
+            'bad'     => [
+                'Rush ahead blindly',
+                'Make a risky choice',
+                'Ignore the warning',
+                'Take an unnecessary risk',
+                'Act without thinking',
+            ],
         ];
+
+        $choices = [];
+        for ($i = 0; $i < $good; $i++) {
+            $choices[] = ['label' => $pool['good'][$i % count($pool['good'])], 'type' => 'good'];
+        }
+        for ($i = 0; $i < $neutral; $i++) {
+            $choices[] = ['label' => $pool['neutral'][$i % count($pool['neutral'])], 'type' => 'neutral'];
+        }
+        for ($i = 0; $i < $bad; $i++) {
+            $choices[] = ['label' => $pool['bad'][$i % count($pool['bad'])], 'type' => 'bad'];
+        }
+
+        return $choices;
     }
 
     /**
