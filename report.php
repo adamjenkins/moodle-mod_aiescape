@@ -101,6 +101,10 @@ if ($attemptid) {
 
 // View 2: attempts for one student.
 if ($userid) {
+    // Ensure the requested user has data in this activity before disclosing their name.
+    if (!$DB->record_exists('aiescape_attempts', ['aiescape' => $aiescape->id, 'userid' => $userid])) {
+        redirect(new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id]));
+    }
     $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     echo $OUTPUT->heading(get_string('reportheading', 'mod_aiescape', fullname($user)), 3);
 

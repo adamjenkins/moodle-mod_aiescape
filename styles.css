@@ -1,0 +1,28 @@
+/**
+ * Styles for mod_aiescape.
+ *
+ * @package    mod_aiescape
+ * @copyright  2026 Adam Jenkins <adam@wisecat.net>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+.aiescape-game {
+    position: relative;
+}
+
+/* Fullscreen mode — make game div a flex column so chatlog fills available height. */
+.aiescape-game:fullscreen,
+.aiescape-game:-webkit-full-screen {
+    padding: 1.25rem;
+    background-color: var(--bs-body-bg, #fff);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.aiescape-game:fullscreen #aiescape-chatlog,
+.aiescape-game:-webkit-full-screen #aiescape-chatlog {
+    flex: 1 1 0;
+    max-height: none;
+    min-height: 0;
+}

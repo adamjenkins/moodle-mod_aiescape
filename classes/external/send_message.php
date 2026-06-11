@@ -96,7 +96,7 @@ class send_message extends external_api {
             MUST_EXIST
         );
 
-        if ($attempt->status === 'completed') {
+        if ($attempt->status !== 'inprogress') {
             throw new \moodle_exception('error:invalidattempt', 'mod_aiescape');
         }
 

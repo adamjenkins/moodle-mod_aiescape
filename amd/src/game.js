@@ -347,6 +347,40 @@ function(Ajax, Notification, Templates, Str) {
         });
     };
 
+    /**
+     * Toggles the game container in and out of fullscreen mode.
+     */
+    var toggleFullscreen = function() {
+        var game = document.getElementById('aiescape-game');
+        if (!document.fullscreenElement) {
+            game.requestFullscreen().catch(function() {});
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    /**
+     * Updates the fullscreen button icons, aria-label, and title to reflect current state.
+     */
+    var updateFullscreenButton = function() {
+        var btn = document.getElementById('aiescape-fullscreen-btn');
+        if (!btn) {
+            return;
+        }
+        var isFs = !!document.fullscreenElement;
+        var label = isFs ? btn.dataset.exitlabel : btn.dataset.enterlabel;
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+        var enterIcon = btn.querySelector('.aiescape-icon-enter');
+        var exitIcon  = btn.querySelector('.aiescape-icon-exit');
+        if (enterIcon) {
+            enterIcon.classList.toggle('d-none', isFs);
+        }
+        if (exitIcon) {
+            exitIcon.classList.toggle('d-none', !isFs);
+        }
+    };
+
     /** Hides the quit button (called after completion or abandonment). */
     var hideQuitButton = function() {
         var btn = document.getElementById('aiescape-quit-btn');
@@ -500,6 +534,16 @@ function(Ajax, Notification, Templates, Str) {
             var quitBtn = document.getElementById('aiescape-quit-btn');
             if (quitBtn) {
                 quitBtn.addEventListener('click', quitAttempt);
+            }
+
+            var fsBtn = document.getElementById('aiescape-fullscreen-btn');
+            if (fsBtn) {
+                if (!document.fullscreenEnabled) {
+                    fsBtn.classList.add('d-none');
+                } else {
+                    fsBtn.addEventListener('click', toggleFullscreen);
+                    document.addEventListener('fullscreenchange', updateFullscreenButton);
+                }
             }
         },
     };

@@ -111,6 +111,8 @@ $string['defaultbuttonlabel'] = 'Button {$a} label';
 $string['defaultbuttonprompt'] = 'Button {$a} prompt';
 
 // Game UI strings.
+$string['enterfullscreen'] = 'Enter full screen';
+$string['exitfullscreen'] = 'Exit full screen';
 $string['startgame'] = 'Start Game';
 $string['resumegame'] = 'Continue';
 $string['sendmessage'] = 'Send';

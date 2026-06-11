@@ -4,12 +4,12 @@ A Moodle activity plugin that creates an AI-driven interactive escape room exper
 
 ## Requirements
 
-- Moodle 4.5 or later (requires `core_ai`)
+- Moodle 5.0 or later (requires `core_ai`)
 - An AI provider configured in Site administration → AI → AI providers (e.g. OpenAI, Ollama)
 
 ## Installation
 
-1. Copy (or symlink) the plugin directory into `<moodleroot>/mod/aiescape/`
+1. Copy the plugin directory into `<moodleroot>/public/mod/aiescape/`
 2. Visit Site administration → Notifications to run the upgrade
 3. Configure an AI provider under Site administration → AI → AI providers
 
@@ -19,7 +19,7 @@ A Moodle activity plugin that creates an AI-driven interactive escape room exper
 
 | Mode | Description |
 |------|-------------|
-| **Multiple choice** | Students pick from three AI-generated options each turn |
+| **Multiple choice** | Students pick from AI-generated choice buttons each turn |
 | **Free text** | Students type their own responses |
 | **Combo** | Both choice buttons and a free-text input are available |
 
@@ -27,6 +27,16 @@ A Moodle activity plugin that creates an AI-driven interactive escape room exper
 
 - **Narrative style** — the AI narrates a story; the student takes actions as the protagonist.
 - **Persona style** — the AI plays a named character; the student speaks directly to that character using first-person dialogue.
+
+### Configurable choice counts
+
+In multiple choice and combo modes, teachers control exactly how many of each type of choice button the AI offers per turn:
+
+- **Good choices** (1–5) — each adds one step toward the goal; at least one is required
+- **Neutral choices** (0–5) — do not change the step tally
+- **Bad choices** (0–5) — each subtracts one step
+
+The AI prompt is constructed to request the exact specified counts. If the AI returns the wrong number, a single correction prompt is sent automatically before falling back to defaults.
 
 ### Additional buttons
 
@@ -46,6 +56,10 @@ Teachers can add extra one-click "action" buttons (e.g. "Hint", "Clue") that tri
 - Completed attempts receive full grade
 - Abandoned attempts can receive partial grade (configurable per activity)
 
+### Fullscreen mode
+
+A fullscreen toggle button in the top-right corner of the game interface lets students expand the activity to fill the browser window. The chat log expands to use the available height. The button is hidden automatically on browsers that do not support the Fullscreen API.
+
 ## Activity settings
 
 | Setting | Description |
@@ -55,6 +69,9 @@ Teachers can add extra one-click "action" buttons (e.g. "Hint", "Clue") that tri
 | Game style | Narrative (AI narrates) or Persona (AI plays a named character) |
 | Persona name | Name of the character — Persona style only |
 | Game mode | Multiple choice / Free text / Combo |
+| Good choices per turn | How many "good" choice buttons to offer each turn (1–5; multichoice/combo only) |
+| Neutral choices per turn | How many "neutral" choice buttons to offer each turn (0–5; multichoice/combo only) |
+| Bad choices per turn | How many "bad" choice buttons to offer each turn (0–5; multichoice/combo only) |
 | Steps | Number of successful moves required to complete |
 | Max attempts | How many attempts a student may make |
 | Show progress | Display step tally to students during play |

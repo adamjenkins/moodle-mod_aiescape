@@ -76,6 +76,10 @@ class trigger_button extends external_api {
         );
         $button   = $DB->get_record('aiescape_buttons', ['id' => $buttonid, 'aiescape' => $aiescape->id], '*', MUST_EXIST);
 
+        if ($attempt->status !== 'inprogress') {
+            throw new \moodle_exception('error:invalidattempt', 'mod_aiescape');
+        }
+
         // Find the last AI message for context.
         $atman = new attempt_manager();
         $messages = $atman->get_attempt_messages($attempt->id);

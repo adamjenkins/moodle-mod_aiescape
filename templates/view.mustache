@@ -39,6 +39,38 @@
      data-gamemode="{{gamemode}}"
      data-steps="{{steps}}">
 
+    <div class="aiescape-toolbar d-flex justify-content-end mb-2">
+        <button id="aiescape-fullscreen-btn"
+                class="btn btn-sm btn-outline-secondary"
+                type="button"
+                title="{{# str }} enterfullscreen, mod_aiescape {{/ str }}"
+                data-enterlabel="{{# str }} enterfullscreen, mod_aiescape {{/ str }}"
+                data-exitlabel="{{# str }} exitfullscreen, mod_aiescape {{/ str }}"
+                aria-label="{{# str }} enterfullscreen, mod_aiescape {{/ str }}">
+            {{! Arrows pointing outward — enter fullscreen }}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                 viewBox="0 0 16 16" class="aiescape-icon-enter" aria-hidden="true">
+                <path d="M1.5 1h3a.5.5 0 0 1 0 1H2.707l3.147 3.146a.5.5 0 1 1-.708.708L2 2.707V4.5a.5.5 0 0
+                         1-1 0v-3A.5.5 0 0 1 1.5 1zm13 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1
+                         0V2.707l-3.146 3.147a.5.5 0 0 1-.708-.708L13.293 2H11.5a.5.5 0 0 1
+                         0-1h3zm-13 11a.5.5 0 0 1 .5.5v1.793l3.146-3.147a.5.5 0 0 1
+                         .708.708L2.707 14H4.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0
+                         1 1 0zm13 0a.5.5 0 0 1 1 0v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1
+                         0-1h1.793l-3.147-3.146a.5.5 0 0 1 .708-.708L14 13.293V11.5a.5.5 0 0 1 .5-.5z"/>
+            </svg>
+            {{! Arrows pointing inward — exit fullscreen }}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                 viewBox="0 0 16 16" class="aiescape-icon-exit d-none" aria-hidden="true">
+                <path d="M5.5 0a.5.5 0 0 1 .5.5v3A1.5 1.5 0 0 1 4.5 5h-3a.5.5 0 0 1 0-1H4a.5.5
+                         0 0 0 .5-.5V.5a.5.5 0 0 1 1 0zm5 0a.5.5 0 0 1 .5.5V4a.5.5 0 0 0
+                         .5.5h2.5a.5.5 0 0 1 0 1h-3A1.5 1.5 0 0 1 9.5 4V.5a.5.5 0 0 1 1
+                         0zM0 10.5a.5.5 0 0 1 .5-.5h3A1.5 1.5 0 0 1 5 11.5v3a.5.5 0 0 1-1
+                         0V12a.5.5 0 0 0-.5-.5H.5a.5.5 0 0 1-.5-.5zm10 1a1.5 1.5 0 0 1
+                         1.5-1.5h3a.5.5 0 0 1 0 1H12a.5.5 0 0 0-.5.5v2.5a.5.5 0 0 1-1 0v-2.5z"/>
+            </svg>
+        </button>
+    </div>
+
     {{#showprogress}}
     <div class="aiescape-progress mb-3" id="aiescape-progress-container" aria-live="polite">
         <div class="d-flex justify-content-between align-items-center mb-1">
