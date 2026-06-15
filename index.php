@@ -26,4 +26,7 @@ require_once('../../config.php');
 
 $courseid = required_param('id', PARAM_INT);
 
+$course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+require_login($course);
+
 \core_courseformat\activityoverviewbase::redirect_to_overview_page($courseid, 'aiescape');
