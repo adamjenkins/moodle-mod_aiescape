@@ -166,8 +166,15 @@ function(Ajax, Notification, Templates, Str) {
     };
 
     /**
-     * Fires a secondary button prompt, then regenerates choices if in
-     * multichoice or combo mode.
+     * Fires a secondary button prompt. The button's instruction is persisted
+     * server-side so it affects this and all subsequent AI turns; this issues
+     * exactly one AI call and renders its narrative (and any new choices).
+     *
+     * Buttons that have reached their usage limit are disabled client-side
+     * (see renderButtons/this function's success handler) so this should not
+     * normally be reachable once exhausted; the server still rejects it
+     * defensively, but that failure must never leave the story's own choice
+     * buttons disabled.
      *
      * @param {number} buttonId
      */
@@ -175,6 +182,7 @@ function(Ajax, Notification, Templates, Str) {
         if (busy) {
             return;
         }
+        var triggeredBtn = document.querySelector('#aiescape-buttons button[data-buttonid="' + buttonId + '"]');
         setLoading(true);
         disableInput();
 
@@ -184,12 +192,13 @@ function(Ajax, Notification, Templates, Str) {
             buttonid: buttonId,
         })
         .then(function(result) {
+            if (triggeredBtn) {
+                triggeredBtn.dataset.remaining = (result.remaining === -1) ? '' : String(result.remaining);
+            }
             return renderMessage('assistant', result.narrative)
             .then(function() {
-                if (gamemode === 'multichoice' || gamemode === 'combo') {
-                    busy = false;
-                    // sendMessage owns loading/enableInput from here.
-                    return sendMessage('', '', '');
+                if ((gamemode === 'multichoice' || gamemode === 'combo') && result.choices.length) {
+                    renderChoices(result.choices);
                 }
                 setLoading(false);
                 enableInput();
@@ -254,7 +263,8 @@ function(Ajax, Notification, Templates, Str) {
     /**
      * Renders the secondary action buttons.
      *
-     * @param {Array<{id: number, label: string}>} buttons
+     * @param {Array<{id: number, label: string, remaining: number}>} buttons
+     *        remaining is -1 for unlimited, or the number of uses left.
      */
     var renderButtons = function(buttons) {
         var container = document.getElementById('aiescape-buttons');
@@ -266,6 +276,8 @@ function(Ajax, Notification, Templates, Str) {
             btn.className = 'btn btn-outline-secondary btn-sm';
             btn.textContent = button.label;
             btn.dataset.buttonid = button.id;
+            btn.dataset.remaining = (button.remaining === -1) ? '' : String(button.remaining);
+            btn.disabled = (button.remaining === 0);
             btn.addEventListener('click', function() {
                 triggerButton(button.id);
             });
@@ -495,8 +507,12 @@ function(Ajax, Notification, Templates, Str) {
             }
         }
 
-        document.querySelectorAll('#aiescape-buttons button').forEach(function(btn) {
+        // Choice buttons are always re-enabled; additional buttons stay disabled once exhausted.
+        document.querySelectorAll('#aiescape-choices button').forEach(function(btn) {
             btn.disabled = false;
+        });
+        document.querySelectorAll('#aiescape-buttons button').forEach(function(btn) {
+            btn.disabled = (btn.dataset.remaining === '0');
         });
     };
 

@@ -70,8 +70,9 @@ class start_attempt extends external_api {
         ], $messages);
 
         $buttonlist = array_map(fn($b) => [
-            'id'    => (int) $b->id,
-            'label' => $b->label,
+            'id'        => (int) $b->id,
+            'label'     => $b->label,
+            'remaining' => attempt_manager::usage_remaining($b, $messages),
         ], array_values($buttons));
 
         return [
@@ -107,8 +108,9 @@ class start_attempt extends external_api {
             ),
             'buttons' => new external_multiple_structure(
                 new external_single_structure([
-                    'id'    => new external_value(PARAM_INT, 'Button ID'),
-                    'label' => new external_value(PARAM_TEXT, 'Button label'),
+                    'id'        => new external_value(PARAM_INT, 'Button ID'),
+                    'label'     => new external_value(PARAM_TEXT, 'Button label'),
+                    'remaining' => new external_value(PARAM_INT, 'Uses left this attempt; -1 means unlimited'),
                 ])
             ),
             'completed'  => new external_value(PARAM_BOOL, 'Whether this attempt is already completed'),

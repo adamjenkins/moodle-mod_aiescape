@@ -26,3 +26,43 @@
     max-height: none;
     min-height: 0;
 }
+
+/* Improve vertical rhythm between the core activity header and our own page content. */
+body.path-mod-aiescape [role="main"] {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+body.path-mod-aiescape [role="main"] > * {
+    margin: 0;
+}
+
+/* Friendlier, colour-coded summary of the good/neutral/bad choice counts. */
+.aiescape-choicecounts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.aiescape-choicecounts .aiescape-count-pill {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.aiescape-choicecounts .aiescape-count-good {
+    background-color: #d1e7dd;
+    color: #0a3622;
+}
+
+.aiescape-choicecounts .aiescape-count-neutral {
+    background-color: #e2e3e5;
+    color: #41464b;
+}
+
+.aiescape-choicecounts .aiescape-count-bad {
+    background-color: #f8d7da;
+    color: #58151c;
+}

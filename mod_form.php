@@ -61,10 +61,18 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $mform->addRule('premise', get_string('error:premiserequired', 'mod_aiescape'), 'required', null, 'client');
         $mform->addHelpButton('premise', 'premise', 'mod_aiescape');
 
+        $mform->addElement('advcheckbox', 'showpremise', get_string('showpremise', 'mod_aiescape'));
+        $mform->addHelpButton('showpremise', 'showpremise', 'mod_aiescape');
+        $mform->setDefault('showpremise', 0);
+
         $mform->addElement('textarea', 'goal', get_string('goal', 'mod_aiescape'), ['rows' => 4, 'cols' => 60]);
         $mform->setType('goal', PARAM_TEXT);
         $mform->addRule('goal', get_string('error:goalrequired', 'mod_aiescape'), 'required', null, 'client');
         $mform->addHelpButton('goal', 'goal', 'mod_aiescape');
+
+        $mform->addElement('advcheckbox', 'showgoal', get_string('showgoal', 'mod_aiescape'));
+        $mform->addHelpButton('showgoal', 'showgoal', 'mod_aiescape');
+        $mform->setDefault('showgoal', 0);
 
         // Game settings section.
         $mform->addElement('header', 'gamesection', get_string('gamesettings', 'mod_aiescape'));
@@ -153,11 +161,28 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $mform->setDefault('partialscoreonquit', 0);
         $mform->addHelpButton('partialscoreonquit', 'partialscoreonquit', 'mod_aiescape');
 
+        $mform->addElement('selectyesno', 'showchoicecounts', get_string('showchoicecounts', 'mod_aiescape'));
+        $mform->setDefault('showchoicecounts', 0);
+        $mform->addHelpButton('showchoicecounts', 'showchoicecounts', 'mod_aiescape');
+        $mform->hideIf('showchoicecounts', 'gamemode', 'eq', 'freetext');
+
+        // Moderation section.
+        $mform->addElement('header', 'moderationsection', get_string('moderationsection', 'mod_aiescape'));
+
+        $mform->addElement(
+            'textarea',
+            'flagkeywords',
+            get_string('flagkeywords', 'mod_aiescape'),
+            ['rows' => 4, 'cols' => 60]
+        );
+        $mform->setType('flagkeywords', PARAM_TEXT);
+        $mform->addHelpButton('flagkeywords', 'flagkeywords', 'mod_aiescape');
+
         // Additional buttons section.
         $mform->addElement('header', 'buttonssection', get_string('otherbuttonssection', 'mod_aiescape'));
         $mform->addHelpButton('buttonssection', 'otherbuttonssection', 'mod_aiescape');
 
-        // Preset buttons (admin-defined).
+        // Preset buttons (admin-defined). Each may be enabled with its own usage limit.
         $haspresets = false;
         for ($i = 1; $i <= 5; $i++) {
             $presetlabel = trim((string) get_config('mod_aiescape', 'defaultbutton' . $i . 'label'));
@@ -182,6 +207,20 @@ class mod_aiescape_mod_form extends moodleform_mod {
                 [0, 1]
             );
             $mform->setDefault('presetbtn' . $i, 0);
+
+            $mform->addElement(
+                'text',
+                'presetbtn' . $i . 'limit',
+                get_string('buttonusagelimit', 'mod_aiescape'),
+                ['size' => 4]
+            );
+            $mform->setType('presetbtn' . $i . 'limit', PARAM_RAW_TRIMMED);
+            $mform->addHelpButton('presetbtn' . $i . 'limit', 'buttonusagelimit', 'mod_aiescape');
+            $mform->setDefault(
+                'presetbtn' . $i . 'limit',
+                trim((string) get_config('mod_aiescape', 'defaultbutton' . $i . 'usagelimit'))
+            );
+            $mform->hideIf('presetbtn' . $i . 'limit', 'presetbtn' . $i, 'eq', 0);
         }
 
         $repeatarray = [
@@ -192,10 +231,17 @@ class mod_aiescape_mod_form extends moodleform_mod {
                 get_string('buttonprompt', 'mod_aiescape'),
                 ['rows' => 2, 'cols' => 50]
             ),
+            $mform->createElement(
+                'text',
+                'buttonlimit',
+                get_string('buttonusagelimit', 'mod_aiescape'),
+                ['size' => 4]
+            ),
         ];
         $repeateloptions = [
             'buttonlabel'  => ['type' => PARAM_TEXT],
             'buttonprompt' => ['type' => PARAM_TEXT, 'helpbutton' => ['buttonprompt', 'mod_aiescape']],
+            'buttonlimit'  => ['type' => PARAM_RAW_TRIMMED, 'helpbutton' => ['buttonusagelimit', 'mod_aiescape']],
         ];
         $this->repeat_elements(
             $repeatarray,
@@ -250,12 +296,15 @@ class mod_aiescape_mod_form extends moodleform_mod {
             );
             $i = 0;
             foreach ($buttons as $button) {
+                $limit = ($button->usagelimit !== null) ? (string) $button->usagelimit : '';
                 if ($button->defaultindex !== null) {
                     // Pre-check the corresponding preset checkbox.
                     $defaultvalues['presetbtn' . (int) $button->defaultindex] = 1;
+                    $defaultvalues['presetbtn' . (int) $button->defaultindex . 'limit'] = $limit;
                 } else {
                     $defaultvalues['buttonlabel[' . $i . ']']  = $button->label;
                     $defaultvalues['buttonprompt[' . $i . ']'] = $button->prompt;
+                    $defaultvalues['buttonlimit[' . $i . ']']  = $limit;
                     $i++;
                 }
             }
@@ -307,6 +356,29 @@ class mod_aiescape_mod_form extends moodleform_mod {
             }
         }
 
+        for ($i = 1; $i <= 5; $i++) {
+            $field = 'presetbtn' . $i . 'limit';
+            if (!empty($data[$field]) && !$this->is_valid_usage_limit($data[$field])) {
+                $errors[$field] = get_string('error:buttonlimitinvalid', 'mod_aiescape');
+            }
+        }
+        foreach ((array) ($data['buttonlimit'] ?? []) as $i => $limit) {
+            if (!empty($limit) && !$this->is_valid_usage_limit($limit)) {
+                $errors['buttonlimit[' . $i . ']'] = get_string('error:buttonlimitinvalid', 'mod_aiescape');
+            }
+        }
+
         return $errors;
+    }
+
+    /**
+     * Returns true when a button usage-limit value is empty (unlimited) or a positive integer.
+     *
+     * @param string $value
+     * @return bool
+     */
+    private function is_valid_usage_limit(string $value): bool {
+        $trimmed = trim($value);
+        return $trimmed === '' || (ctype_digit($trimmed) && (int) $trimmed > 0);
     }
 }

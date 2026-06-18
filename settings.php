@@ -64,5 +64,12 @@ if ($ADMIN->fulltree) {
             '',
             ''
         ));
+        $settings->add(new admin_setting_configtext(
+            'mod_aiescape/defaultbutton' . $i . 'usagelimit',
+            get_string('defaultbuttonusagelimit', 'mod_aiescape', $i),
+            get_string('defaultbuttonusagelimit_desc', 'mod_aiescape'),
+            '',
+            PARAM_RAW_TRIMMED
+        ));
     }
 }

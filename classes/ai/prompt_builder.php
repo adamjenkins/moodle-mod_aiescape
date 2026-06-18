@@ -75,41 +75,6 @@ class prompt_builder {
     }
 
     /**
-     * Builds a prompt for an additional-button action.
-     *
-     * @param string        $buttonprompt  The button's configured prompt text
-     * @param string        $lastaimessage The most recent AI narrative
-     * @param stdClass|null $aiescape      Activity record (used for persona context)
-     * @return string
-     */
-    public function build_button_prompt(
-        string $buttonprompt,
-        string $lastaimessage,
-        ?\stdClass $aiescape = null
-    ): string {
-        $ispersona = $aiescape && $this->is_persona($aiescape);
-        $name      = $ispersona ? $this->persona_name($aiescape) : '';
-
-        $lines = [];
-        if ($ispersona && $name !== '') {
-            $lines[] = "You are $name, a character in an interactive educational activity.";
-        } else {
-            $lines[] = 'You are an AI running an interactive escape room activity.';
-        }
-        $lines[] = '';
-        $lines[] = 'Your last response was:';
-        $lines[] = $lastaimessage;
-        $lines[] = '';
-        $lines[] = 'The student has pressed a special button with the following instruction:';
-        $lines[] = $buttonprompt;
-        $lines[] = '';
-        $lines[] = 'Respond with ONLY a valid JSON object:';
-        $lines[] = '{"narrative": "<your response as plain text>"}';
-
-        return implode("\n", $lines);
-    }
-
-    /**
      * Builds a correction prompt when the AI returned the wrong number of choices.
      *
      * @param stdClass $aiescape      The activity record

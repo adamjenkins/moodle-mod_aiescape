@@ -22,8 +22,6 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aiescape\attempt_manager;
-use mod_aiescape\ai\prompt_builder;
-use mod_aiescape\ai\response_parser;
 
 /**
  * Web service: send a student message and receive the AI response.
@@ -116,69 +114,24 @@ class send_message extends external_api {
         }
 
         // Record the student's message.
-        $atman->record_message($attemptid, 'user', $usermessagetext, $choicetype ?: null, $presetchange);
+        $messageid = $atman->record_message($attemptid, 'user', $usermessagetext, $choicetype ?: null, $presetchange);
+
+        // Flag the message for teacher review if it matches a configured keyword.
+        // Only applies to free-typed responses (not fixed multichoice button labels).
+        if ($choicetype === '' && $aiescape->gamemode !== 'multichoice' && !empty($aiescape->flagkeywords)) {
+            $atman->flag_message_if_matched($messageid, $attemptid, $usermessagetext, $aiescape->flagkeywords);
+        }
 
         // Build and send the AI prompt.
         $messages = $atman->get_attempt_messages($attemptid);
-        $builder  = new prompt_builder();
-        $prompt   = $builder->build($aiescape, $messages, (int) $attempt->stepstally);
-
-        $aiaction  = new \core_ai\aiactions\generate_text(
-            contextid: $context->id,
-            userid: $USER->id,
-            prompttext: $prompt
-        );
-        $aimanager = \core\di::get(\core_ai\manager::class);
-        $airesponse = $aimanager->process_action($aiaction);
-
-        if (!$airesponse->get_success()) {
-            throw new \moodle_exception('error:aifailed', 'mod_aiescape');
-        }
-
-        $choicesgood    = max(1, (int) ($aiescape->choicesgood ?? 1));
-        $choicesneutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
-        $choicesbad     = max(0, (int) ($aiescape->choicesbad ?? 1));
-
-        $rawtext = $airesponse->get_response_data()['generatedcontent'] ?? '';
-        $parser  = new response_parser();
-        $parsed  = $parser->parse($rawtext, $aiescape->gamemode, $choicesgood, $choicesneutral, $choicesbad);
-
-        // If multichoice/combo choices don't match expected counts, ask the AI to correct them.
-        if (
-            ($aiescape->gamemode === 'multichoice' || $aiescape->gamemode === 'combo') &&
-            !$parser->choices_match_expected($parsed['choices'], $choicesgood, $choicesneutral, $choicesbad)
-        ) {
-            $correctionprompt = $builder->build_correction_prompt(
-                $aiescape,
-                $parsed['narrative'],
-                $parsed['choices']
-            );
-            $correctionaction = new \core_ai\aiactions\generate_text(
-                contextid: $context->id,
-                userid: $USER->id,
-                prompttext: $correctionprompt
-            );
-            $correctionresponse = $aimanager->process_action($correctionaction);
-            if ($correctionresponse->get_success()) {
-                $correctiontext  = $correctionresponse->get_response_data()['generatedcontent'] ?? '';
-                $correctedchoices = $parser->parse_correction_response(
-                    $correctiontext,
-                    $choicesgood,
-                    $choicesneutral,
-                    $choicesbad
-                );
-                if (!empty($correctedchoices)) {
-                    $parsed['choices'] = $correctedchoices;
-                }
-            }
-        }
+        $result   = $atman->run_ai_turn($aiescape, $context, $USER->id, $messages, (int) $attempt->stepstally);
 
         // Apply step change (prefer AI-evaluated for freetext; preset for choices).
-        $stepchange = ($presetchange !== null) ? $presetchange : $parsed['stepchange'];
+        $stepchange = ($presetchange !== null) ? $presetchange : $result['stepchange'];
         $atman->update_tally($attempt, $stepchange);
 
         // Record the AI response.
-        $atman->record_message($attemptid, 'assistant', $parsed['narrative'], null, $stepchange);
+        $atman->record_message($attemptid, 'assistant', $result['narrative'], null, $stepchange);
 
         // Refresh attempt after tally update.
         $attempt = $DB->get_record('aiescape_attempts', ['id' => $attemptid, 'aiescape' => $aiescape->id]);
@@ -192,11 +145,9 @@ class send_message extends external_api {
             $completed = true;
         }
 
-        $choices = array_map(fn($c) => ['label' => $c['label'], 'type' => $c['type']], $parsed['choices']);
-
         return [
-            'narrative'  => $parsed['narrative'],
-            'choices'    => $choices,
+            'narrative'  => $result['narrative'],
+            'choices'    => $result['choices'],
             'completed'  => $completed,
             'canrestart' => $atman->can_start_new_attempt($aiescape, $USER->id),
             'tally'      => (int) $attempt->stepstally,

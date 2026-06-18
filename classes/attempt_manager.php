@@ -176,6 +176,141 @@ class attempt_manager {
     }
 
     /**
+     * Runs a single AI turn: builds the prompt from the conversation history, calls
+     * the AI, parses the response, and retries with a correction prompt if the
+     * multichoice/combo choice counts returned don't match what was configured.
+     *
+     * Used by both normal turns (send_message) and additional-button turns
+     * (trigger_button) so both go through identical prompt-building and
+     * choice-validation logic.
+     *
+     * @param \stdClass        $aiescape The activity record
+     * @param \context_module  $context  The module context (used for the AI action)
+     * @param int              $userid   The user triggering this turn
+     * @param array            $messages Conversation history, oldest first
+     * @param int              $tally    Current step tally
+     * @return array {narrative: string, choices: array, stepchange: int}
+     */
+    public function run_ai_turn(
+        \stdClass $aiescape,
+        \context_module $context,
+        int $userid,
+        array $messages,
+        int $tally
+    ): array {
+        $builder = new \mod_aiescape\ai\prompt_builder();
+        $parser  = new \mod_aiescape\ai\response_parser();
+
+        $prompt = $builder->build($aiescape, $messages, $tally);
+
+        $aiaction = new \core_ai\aiactions\generate_text(
+            contextid: $context->id,
+            userid: $userid,
+            prompttext: $prompt
+        );
+        $aimanager  = \core\di::get(\core_ai\manager::class);
+        $airesponse = $aimanager->process_action($aiaction);
+
+        if (!$airesponse->get_success()) {
+            throw new \moodle_exception('error:aifailed', 'mod_aiescape');
+        }
+
+        $choicesgood    = max(1, (int) ($aiescape->choicesgood ?? 1));
+        $choicesneutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
+        $choicesbad     = max(0, (int) ($aiescape->choicesbad ?? 1));
+
+        $rawtext = $airesponse->get_response_data()['generatedcontent'] ?? '';
+        $parsed  = $parser->parse($rawtext, $aiescape->gamemode, $choicesgood, $choicesneutral, $choicesbad);
+
+        // If multichoice/combo choices don't match expected counts, ask the AI to correct them.
+        if (
+            ($aiescape->gamemode === 'multichoice' || $aiescape->gamemode === 'combo') &&
+            !$parser->choices_match_expected($parsed['choices'], $choicesgood, $choicesneutral, $choicesbad)
+        ) {
+            $correctionprompt = $builder->build_correction_prompt($aiescape, $parsed['narrative'], $parsed['choices']);
+            $correctionaction = new \core_ai\aiactions\generate_text(
+                contextid: $context->id,
+                userid: $userid,
+                prompttext: $correctionprompt
+            );
+            $correctionresponse = $aimanager->process_action($correctionaction);
+            if ($correctionresponse->get_success()) {
+                $correctiontext   = $correctionresponse->get_response_data()['generatedcontent'] ?? '';
+                $correctedchoices = $parser->parse_correction_response(
+                    $correctiontext,
+                    $choicesgood,
+                    $choicesneutral,
+                    $choicesbad
+                );
+                if (!empty($correctedchoices)) {
+                    $parsed['choices'] = $correctedchoices;
+                }
+            }
+        }
+
+        return [
+            'narrative'  => $parsed['narrative'],
+            'choices'    => array_map(fn($c) => ['label' => $c['label'], 'type' => $c['type']], $parsed['choices']),
+            'stepchange' => $parsed['stepchange'],
+        ];
+    }
+
+    /**
+     * Returns how many more times a button may be used this attempt.
+     *
+     * @param \stdClass $button   The aiescape_buttons record (must have label, usagelimit)
+     * @param array     $messages Conversation history, oldest first
+     * @return int -1 if unlimited, otherwise the number of uses remaining (never negative)
+     */
+    public static function usage_remaining(\stdClass $button, array $messages): int {
+        if ($button->usagelimit === null) {
+            return -1;
+        }
+
+        $used = count(array_filter(
+            $messages,
+            fn($msg) => $msg->role === 'user' && $msg->choicetype === $button->label
+        ));
+
+        return max(0, (int) $button->usagelimit - $used);
+    }
+
+    /**
+     * Flags a message for teacher review when it matches a configured keyword.
+     *
+     * @param int    $messageid     The id of the message to potentially flag
+     * @param int    $attemptid     The attempt the message belongs to
+     * @param string $message       The message text to check
+     * @param string $keywordsconfig One keyword/phrase per line (from aiescape->flagkeywords)
+     * @return void
+     */
+    public function flag_message_if_matched(
+        int $messageid,
+        int $attemptid,
+        string $message,
+        string $keywordsconfig
+    ): void {
+        global $DB;
+
+        $keywords = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $keywordsconfig)));
+        if (empty($keywords) || $message === '') {
+            return;
+        }
+
+        foreach ($keywords as $keyword) {
+            if (stripos($message, $keyword) !== false) {
+                $record              = new \stdClass();
+                $record->attemptid   = $attemptid;
+                $record->messageid   = $messageid;
+                $record->keyword     = $keyword;
+                $record->timecreated = time();
+                $DB->insert_record('aiescape_flags', $record);
+                return;
+            }
+        }
+    }
+
+    /**
      * Marks an attempt as abandoned and optionally awards a partial grade.
      *
      * @param stdClass $attempt  The attempt record (must be in 'inprogress' status)

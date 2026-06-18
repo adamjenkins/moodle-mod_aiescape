@@ -53,10 +53,44 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
 
 echo $OUTPUT->header();
+echo html_writer::start_div('aiescape-page');
 echo $OUTPUT->heading(format_string($aiescape->name), 2);
 
-if (trim(strip_tags($aiescape->intro))) {
-    echo $OUTPUT->box(format_module_intro('aiescape', $aiescape, $cm->id), 'generalbox mod_introbox');
+// Note: the activity description is already rendered once by core's activity
+// header inside $OUTPUT->header() above; do not print $aiescape->intro again here.
+
+if (!empty($aiescape->showpremise) || !empty($aiescape->showgoal)) {
+    echo $OUTPUT->box_start('generalbox mod_aiescape_premisegoal');
+    if (!empty($aiescape->showpremise)) {
+        echo html_writer::tag('h4', get_string('premise', 'mod_aiescape'));
+        echo html_writer::div(format_text($aiescape->premise, FORMAT_PLAIN));
+    }
+    if (!empty($aiescape->showgoal)) {
+        echo html_writer::tag('h4', get_string('goal', 'mod_aiescape'));
+        echo html_writer::div(format_text($aiescape->goal, FORMAT_PLAIN));
+    }
+    echo $OUTPUT->box_end();
+}
+
+if (!empty($aiescape->showchoicecounts) && $aiescape->gamemode !== 'freetext') {
+    echo html_writer::start_div('aiescape-choicecounts mb-3');
+    echo html_writer::span(
+        get_string('choicecount_good', 'mod_aiescape', $aiescape->choicesgood),
+        'badge rounded-pill aiescape-count-pill aiescape-count-good'
+    );
+    if ($aiescape->choicesneutral > 0) {
+        echo html_writer::span(
+            get_string('choicecount_neutral', 'mod_aiescape', $aiescape->choicesneutral),
+            'badge rounded-pill aiescape-count-pill aiescape-count-neutral'
+        );
+    }
+    if ($aiescape->choicesbad > 0) {
+        echo html_writer::span(
+            get_string('choicecount_bad', 'mod_aiescape', $aiescape->choicesbad),
+            'badge rounded-pill aiescape-count-pill aiescape-count-bad'
+        );
+    }
+    echo html_writer::end_div();
 }
 
 // Teacher view: show attempt stats and link to report.
@@ -69,10 +103,28 @@ if (has_capability('mod/aiescape:viewreports', $context)) {
     echo html_writer::tag('p', get_string('completed', 'mod_aiescape') . ': ' . $completed);
     $reporturl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id]);
     echo html_writer::link($reporturl, get_string('report', 'mod_aiescape'), ['class' => 'btn btn-secondary']);
+
+    if (!empty($aiescape->flagkeywords)) {
+        $flaggedcount = $DB->count_records_sql(
+            'SELECT COUNT(f.id)
+               FROM {aiescape_flags} f
+               JOIN {aiescape_attempts} aa ON aa.id = f.attemptid
+              WHERE aa.aiescape = :aiescape',
+            ['aiescape' => $aiescape->id]
+        );
+        $flaggedurl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id, 'flagged' => 1]);
+        echo ' ' . html_writer::link(
+            $flaggedurl,
+            get_string('viewflaggedattempts', 'mod_aiescape', $flaggedcount),
+            ['class' => 'btn btn-outline-warning']
+        );
+    }
+
     echo $OUTPUT->box_end();
 
     // Fall through to the game UI only if this user can also play (e.g. admin testing).
     if (!has_capability('mod/aiescape:play', $context)) {
+        echo html_writer::end_div();
         echo $OUTPUT->footer();
         exit;
     }
@@ -81,6 +133,7 @@ if (has_capability('mod/aiescape:viewreports', $context)) {
 // Student view.
 if (!has_capability('mod/aiescape:play', $context)) {
     echo $OUTPUT->notification(get_string('error:nopermission', 'mod_aiescape'), 'error');
+    echo html_writer::end_div();
     echo $OUTPUT->footer();
     exit;
 }
@@ -98,6 +151,7 @@ if (!$canstart && !$activeattempt) {
         echo html_writer::link($myurl, get_string('viewattempts', 'mod_aiescape'), ['class' => 'btn btn-secondary mt-2']);
     }
 
+    echo html_writer::end_div();
     echo $OUTPUT->footer();
     exit;
 }
@@ -145,4 +199,5 @@ echo $OUTPUT->render_from_template('mod_aiescape/view', $templatecontext);
 
 $PAGE->requires->js_call_amd('mod_aiescape/game', 'init', [$cm->id]);
 
+echo html_writer::end_div();
 echo $OUTPUT->footer();

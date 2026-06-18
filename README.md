@@ -40,7 +40,18 @@ The AI prompt is constructed to request the exact specified counts. If the AI re
 
 ### Additional buttons
 
-Teachers can add extra one-click "action" buttons (e.g. "Hint", "Clue") that trigger a custom AI prompt without affecting the conversation history or step tally. Administrators can pre-define up to five default buttons that teachers enable or disable per activity.
+Teachers can add extra one-click "action" buttons (e.g. "Hint", "Clue") that send a custom prompt to the AI. The button's instruction is recorded in the conversation history, so it affects the AI's current reply and every turn for the rest of the attempt — without changing the step tally. Each button can have its own usage limit (a maximum number of uses per attempt, or unlimited); once exhausted, the button is greyed out for the rest of that attempt without interrupting the story. Administrators can pre-define up to five default buttons (with their own default usage limit) that teachers enable, and optionally override the limit for, per activity.
+
+### Module page display options
+
+Teachers can optionally surface scenario details directly on the module page (outside of gameplay):
+
+- **Display premise / Display goal** — independent checkboxes, similar to Moodle's standard "Display description on course page" option, shown directly below the Premise and Goal fields in the activity settings
+- **Show choice counts to students** — displays the number of good/neutral/bad choices offered each turn as colour-coded pills (multichoice/combo only)
+
+### Moderation: keyword flagging
+
+Teachers can configure a list of keywords or phrases (one per line, case-insensitive). Any free-text student response (free text or combo mode) containing a match is automatically flagged for review in a dedicated **Flagged attempts** report, alongside the matched keyword and a link to the full attempt replay. Flagged messages are also highlighted in the attempt replay view.
 
 ### Attempt management
 
@@ -72,12 +83,16 @@ A fullscreen toggle button in the top-right corner of the game interface lets st
 | Good choices per turn | How many "good" choice buttons to offer each turn (1–5; multichoice/combo only) |
 | Neutral choices per turn | How many "neutral" choice buttons to offer each turn (0–5; multichoice/combo only) |
 | Bad choices per turn | How many "bad" choice buttons to offer each turn (0–5; multichoice/combo only) |
+| Display premise | Show the premise to students on the module page |
+| Display goal | Show the goal to students on the module page |
 | Steps | Number of successful moves required to complete |
 | Max attempts | How many attempts a student may make |
 | Show progress | Display step tally to students during play |
 | Allow student review | Let students re-read completed attempts |
 | Partial score on quit | Award proportional grade when a student quits early |
-| Additional buttons | Extra one-click prompt buttons added to the game interface |
+| Show choice counts to students | Display the good/neutral/bad choice counts on the module page (multichoice/combo only) |
+| Flag keywords | One keyword/phrase per line; flags matching free-text responses for teacher review |
+| Additional buttons | Extra one-click prompt buttons added to the game interface, each with its own optional usage limit |
 
 ## Admin settings
 
@@ -85,7 +100,7 @@ Found at Site administration → Plugins → Activity modules → AI Escape Room
 
 - **AI provider info** — read-only table showing the active provider name, type, model, and endpoint
 - **Show AI provider info to teachers** — surface the provider badge on the activity page for users with the `viewreports` capability
-- **Default buttons (slots 1–5)** — pre-define up to five buttons that teachers can enable per activity
+- **Default buttons (slots 1–5)** — pre-define up to five buttons (label, prompt, and default usage limit) that teachers can enable per activity
 
 ## Privacy
 
@@ -93,6 +108,7 @@ This plugin stores the following personal data:
 
 - Attempt records (start time, completion time, status, grade)
 - Conversation messages (role, content, timestamp)
+- Keyword-match flags raised against a student's own messages (matched keyword, timestamp)
 
 All personal data is exportable and deletable via Moodle's Privacy API (`\mod_aiescape\privacy\provider`).
 

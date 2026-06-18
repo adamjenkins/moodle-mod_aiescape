@@ -33,6 +33,7 @@ require_once($CFG->dirroot . '/mod/aiescape/lib.php');
 $id        = required_param('id', PARAM_INT);
 $userid    = optional_param('userid', 0, PARAM_INT);
 $attemptid = optional_param('attemptid', 0, PARAM_INT);
+$flagged   = optional_param('flagged', 0, PARAM_BOOL);
 
 [$course, $cm] = get_course_and_cm_from_cmid($id, 'aiescape');
 $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance], '*', MUST_EXIST);
@@ -53,6 +54,55 @@ echo $OUTPUT->header();
 $backtoactivity = new moodle_url('/mod/aiescape/view.php', ['id' => $cm->id]);
 $atman = new \mod_aiescape\attempt_manager();
 
+// View 4: flagged messages across all attempts for this activity.
+if ($flagged) {
+    echo $OUTPUT->heading(get_string('flaggedreportheading', 'mod_aiescape'), 3);
+
+    $sql = "SELECT f.id, f.keyword, f.timecreated, m.message, f.attemptid, aa.userid
+              FROM {aiescape_flags} f
+              JOIN {aiescape_messages} m ON m.id = f.messageid
+              JOIN {aiescape_attempts} aa ON aa.id = f.attemptid
+             WHERE aa.aiescape = :aiescape
+          ORDER BY f.timecreated DESC";
+    $flags = $DB->get_records_sql($sql, ['aiescape' => $aiescape->id]);
+
+    if (empty($flags)) {
+        echo $OUTPUT->notification(get_string('noflagged', 'mod_aiescape'), 'info');
+    } else {
+        $userids = array_unique(array_map(fn($f) => $f->userid, $flags));
+        $users   = $DB->get_records_list('user', 'id', $userids);
+
+        $table = new html_table();
+        $table->head = [
+            get_string('student', 'mod_aiescape'),
+            get_string('keyword', 'mod_aiescape'),
+            get_string('messageexcerpt', 'mod_aiescape'),
+            get_string('attemptstarted', 'mod_aiescape'),
+            '',
+        ];
+        foreach ($flags as $flag) {
+            $viewurl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id, 'attemptid' => $flag->attemptid]);
+            $table->data[] = [
+                fullname($users[$flag->userid]),
+                s($flag->keyword),
+                s($flag->message),
+                userdate($flag->timecreated),
+                html_writer::link(
+                    $viewurl,
+                    get_string('viewattempt', 'mod_aiescape'),
+                    ['class' => 'btn btn-sm btn-outline-primary']
+                ),
+            ];
+        }
+        echo html_writer::table($table);
+    }
+
+    $backurl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id]);
+    echo html_writer::link($backurl, get_string('backtolist', 'mod_aiescape'), ['class' => 'btn btn-secondary mt-2']);
+    echo $OUTPUT->footer();
+    exit;
+}
+
 // View 3: single attempt replay.
 if ($attemptid) {
     $attempt = $DB->get_record('aiescape_attempts', ['id' => $attemptid, 'aiescape' => $aiescape->id], '*', MUST_EXIST);
@@ -70,7 +120,9 @@ if ($attemptid) {
     echo $OUTPUT->heading(get_string('attemptnumber', 'mod_aiescape', $seqnum), 3);
     echo html_writer::tag('p', fullname($user) . ' &mdash; ' . userdate($attempt->timecreated));
 
-    $messages = $atman->get_attempt_messages($attemptid);
+    $messages   = $atman->get_attempt_messages($attemptid);
+    $flaggedids = $DB->get_records_menu('aiescape_flags', ['attemptid' => $attemptid], '', 'messageid, keyword');
+
     if (empty($messages)) {
         echo $OUTPUT->notification(get_string('noattempts', 'mod_aiescape'), 'info');
     } else {
@@ -79,15 +131,23 @@ if ($attemptid) {
             ['style' => 'max-height:600px;overflow-y:auto;']
         );
         foreach ($messages as $msg) {
-            $isuser = ($msg->role === 'user');
-            $align  = $isuser ? 'text-end' : 'text-start';
-            $bg     = $isuser ? 'bg-primary text-white' : 'bg-light';
+            $isuser    = ($msg->role === 'user');
+            $align     = $isuser ? 'text-end' : 'text-start';
+            $bg        = $isuser ? 'bg-primary text-white' : 'bg-light';
+            $isflagged = isset($flaggedids[$msg->id]);
+            $cardclass = "card $bg p-2 px-3" . ($isflagged ? ' border border-warning border-3' : '');
+
             echo html_writer::start_div("d-flex mb-2 " . ($isuser ? 'justify-content-end' : 'justify-content-start'));
-            echo html_writer::tag(
-                'div',
-                format_text($msg->message, FORMAT_PLAIN),
-                ['class' => "card $bg p-2 px-3", 'style' => 'max-width:80%;border-radius:1rem;']
-            );
+            echo html_writer::start_tag('div', ['class' => $cardclass, 'style' => 'max-width:80%;border-radius:1rem;']);
+            echo format_text($msg->message, FORMAT_PLAIN);
+            if ($isflagged) {
+                echo html_writer::tag(
+                    'div',
+                    get_string('matchedkeyword', 'mod_aiescape', s($flaggedids[$msg->id])),
+                    ['class' => 'badge bg-warning text-dark mt-1']
+                );
+            }
+            echo html_writer::end_tag('div');
             echo html_writer::end_div();
         }
         echo html_writer::end_div();
@@ -147,6 +207,25 @@ if ($userid) {
 
 // View 1: student list.
 echo $OUTPUT->heading(get_string('report', 'mod_aiescape'), 3);
+
+if (!empty($aiescape->flagkeywords)) {
+    $flaggedcount = $DB->count_records_sql(
+        'SELECT COUNT(f.id)
+           FROM {aiescape_flags} f
+           JOIN {aiescape_attempts} aa ON aa.id = f.attemptid
+          WHERE aa.aiescape = :aiescape',
+        ['aiescape' => $aiescape->id]
+    );
+    $flaggedurl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id, 'flagged' => 1]);
+    echo html_writer::div(
+        html_writer::link(
+            $flaggedurl,
+            get_string('viewflaggedattempts', 'mod_aiescape', $flaggedcount),
+            ['class' => 'btn btn-outline-warning btn-sm']
+        ),
+        'mb-3'
+    );
+}
 
 // Extra identity fields (e.g. email, idnumber) based on site showuseridentity setting.
 $identityfields = \core_user\fields::get_identity_fields($context, false);

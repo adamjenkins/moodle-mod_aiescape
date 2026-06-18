@@ -102,10 +102,11 @@ function aiescape_delete_instance($id) {
         return false;
     }
 
-    // Delete all messages for all attempts.
+    // Delete all messages and flags for all attempts.
     $attemptids = $DB->get_fieldset_select('aiescape_attempts', 'id', 'aiescape = ?', [$id]);
     if ($attemptids) {
         [$insql, $params] = $DB->get_in_or_equal($attemptids);
+        $DB->delete_records_select('aiescape_flags', "attemptid $insql", $params);
         $DB->delete_records_select('aiescape_messages', "attemptid $insql", $params);
     }
 
@@ -150,6 +151,7 @@ function aiescape_save_buttons(stdClass $data) {
         $record->prompt       = $prompt;
         $record->sortorder    = $sortorder++;
         $record->defaultindex = $i;
+        $record->usagelimit   = aiescape_parse_usage_limit($data->{'presetbtn' . $i . 'limit'} ?? '');
         $DB->insert_record('aiescape_buttons', $record);
     }
 
@@ -160,6 +162,7 @@ function aiescape_save_buttons(stdClass $data) {
 
     $labels  = (array) $data->buttonlabel;
     $prompts = (array) ($data->buttonprompt ?? []);
+    $limits  = (array) ($data->buttonlimit ?? []);
 
     foreach ($labels as $i => $label) {
         $label  = trim($label);
@@ -173,8 +176,20 @@ function aiescape_save_buttons(stdClass $data) {
         $record->prompt       = $prompt;
         $record->sortorder    = $sortorder++;
         $record->defaultindex = null;
+        $record->usagelimit   = aiescape_parse_usage_limit($limits[$i] ?? '');
         $DB->insert_record('aiescape_buttons', $record);
     }
+}
+
+/**
+ * Parses a button usage-limit form value into a database-ready value.
+ *
+ * @param mixed $raw The raw form value (string or number)
+ * @return int|null A positive integer limit, or null for unlimited
+ */
+function aiescape_parse_usage_limit($raw): ?int {
+    $trimmed = trim((string) $raw);
+    return ($trimmed === '') ? null : (int) $trimmed;
 }
 
 /**
@@ -322,6 +337,9 @@ function aiescape_reset_userdata($data) {
 
     if (!empty($data->reset_aiescape_attempts)) {
         $sql = 'aiescape IN (SELECT id FROM {aiescape} WHERE course = ?)';
+        $DB->delete_records_select('aiescape_flags', "attemptid IN (
+            SELECT id FROM {aiescape_attempts} WHERE $sql
+        )", [$data->courseid]);
         $DB->delete_records_select('aiescape_messages', "attemptid IN (
             SELECT id FROM {aiescape_attempts} WHERE $sql
         )", [$data->courseid]);

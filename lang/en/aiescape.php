@@ -33,8 +33,12 @@ $string['modulename_help'] = 'The AI Escape Room activity places students inside
 $string['scenariosettings'] = 'Scenario';
 $string['premise'] = 'Premise';
 $string['premise_help'] = 'Describe the story or character the AI will play. This can be narration style (e.g. "You wake up in a dark cave…") or character style (e.g. "You are Luigi, who hates pineapple on pizza…"). The AI uses this as its starting instructions.';
+$string['showpremise'] = 'Display premise on module page';
+$string['showpremise_help'] = 'If enabled, the premise will be displayed to students on the module page, similar to how a course page can display an activity\'s description.';
 $string['goal'] = 'Goal';
 $string['goal_help'] = 'Describe the condition that marks the scenario as complete (e.g. "Escape the cave and reach sunlight" or "Convince Luigi to try pineapple on pizza"). The AI uses this to decide when to award completion.';
+$string['showgoal'] = 'Display goal on module page';
+$string['showgoal_help'] = 'If enabled, the goal will be displayed to students on the module page, similar to how a course page can display an activity\'s description.';
 
 // Settings form — game section.
 $string['gamesettings'] = 'Game settings';
@@ -72,10 +76,22 @@ $string['allowstudentreview'] = 'Allow students to review their own attempts';
 $string['allowstudentreview_help'] = 'If enabled, students can view a read-only replay of their past attempts from the activity page.';
 $string['partialscoreonquit'] = 'Award partial score on quit';
 $string['partialscoreonquit_help'] = 'If enabled, students who quit mid-attempt will receive a grade proportional to their progress at the time of quitting (steps accumulated ÷ steps required × maximum grade). If disabled, quitting earns no grade.';
+$string['showchoicecounts'] = 'Show choice counts to students';
+$string['showchoicecounts_help'] = 'If enabled, the number of good/neutral/bad choices offered each turn will be displayed to students on the module page. Not applicable in free text mode.';
+$string['choicecount_good'] = '{$a} good';
+$string['choicecount_neutral'] = '{$a} neutral';
+$string['choicecount_bad'] = '{$a} bad';
+
+// Settings form — moderation section.
+$string['moderationsection'] = 'Moderation';
+$string['flagkeywords'] = 'Flag keywords';
+$string['flagkeywords_help'] = 'One keyword or phrase per line. Free-text student responses (free text or combo mode) containing a match (case-insensitive) will be flagged for teacher review in the attempts report. Leave blank to disable.';
 
 // Settings form — other buttons section.
 $string['otherbuttonssection'] = 'Additional buttons';
 $string['otherbuttonssection_help'] = 'Add optional secondary buttons that send a custom prompt to the AI without affecting the step tally. Useful for help, translation, or simplification features.';
+$string['buttonusagelimit'] = 'Usage limit';
+$string['buttonusagelimit_help'] = 'The maximum number of times a student may use this button during a single attempt. Leave blank for unlimited use.';
 $string['buttonlabel'] = 'Button label';
 $string['buttonprompt'] = 'Button prompt';
 $string['buttonprompt_help'] = 'The prompt sent to the AI when this button is pressed (e.g. "Summarise your last response in Japanese, then return to English").';
@@ -91,11 +107,13 @@ $string['error:goalrequired'] = 'A goal is required.';
 $string['error:stepsinvalid'] = 'Steps to complete must be a whole number between 1 and 100.';
 $string['error:buttonlabelrequired'] = 'A label is required for each button.';
 $string['error:buttonpromptrequired'] = 'A prompt is required for each button.';
+$string['error:buttonlimitinvalid'] = 'The usage limit must be a positive whole number, or left blank for unlimited.';
 $string['error:maxattemptsreached'] = 'You have used all of your allowed attempts for this activity.';
 $string['error:nopermission'] = 'You do not have permission to perform this action.';
 $string['error:invalidattempt'] = 'The specified attempt could not be found.';
 $string['error:aifailed'] = 'The AI service did not respond. Please try again.';
 $string['error:invalidcmid'] = 'Invalid course module ID.';
+$string['error:buttonlimitreached'] = 'This button has already been used the maximum number of times for this attempt.';
 
 // Admin settings.
 $string['aiinfo_heading'] = 'AI configuration';
@@ -109,6 +127,8 @@ $string['defaultbuttonssection'] = 'Default additional buttons';
 $string['defaultbuttonssection_desc'] = 'Define up to five preset buttons that teachers can enable per activity. Leave label blank to disable a slot.';
 $string['defaultbuttonlabel'] = 'Button {$a} label';
 $string['defaultbuttonprompt'] = 'Button {$a} prompt';
+$string['defaultbuttonusagelimit'] = 'Button {$a} default usage limit';
+$string['defaultbuttonusagelimit_desc'] = 'Default maximum number of times this preset button may be used per attempt. Leave blank for unlimited. Teachers can override this when enabling the button on an activity.';
 
 // Game UI strings.
 $string['enterfullscreen'] = 'Enter full screen';
@@ -151,6 +171,13 @@ $string['status_abandoned'] = 'Abandoned';
 $string['backtolist'] = 'Back to student list';
 $string['myattempts'] = 'My attempts';
 $string['myattemptsheading'] = 'My past attempts';
+$string['flaggedattempts'] = 'Flagged attempts';
+$string['viewflaggedattempts'] = 'View flagged attempts ({$a})';
+$string['flaggedreportheading'] = 'Flagged attempts';
+$string['noflagged'] = 'No attempts have been flagged.';
+$string['matchedkeyword'] = 'Matched keyword: {$a}';
+$string['keyword'] = 'Keyword';
+$string['messageexcerpt'] = 'Message';
 
 // Completion.
 $string['completiondetail:completed'] = 'Complete the scenario';
@@ -167,6 +194,9 @@ $string['privacy:metadata:aiescape_messages'] = 'The full conversation history f
 $string['privacy:metadata:aiescape_messages:message'] = 'The text of each message sent or received during the attempt.';
 $string['privacy:metadata:aiescape_messages:role'] = 'Whether the message was sent by the student (user) or the AI (assistant).';
 $string['privacy:metadata:aiescape_messages:timecreated'] = 'The time the message was recorded.';
+$string['privacy:metadata:aiescape_flags'] = 'Records of messages flagged for teacher review by keyword match.';
+$string['privacy:metadata:aiescape_flags:keyword'] = 'The keyword or phrase that matched.';
+$string['privacy:metadata:aiescape_flags:timecreated'] = 'The time the message was flagged.';
 
 // Events.
 $string['eventcoursemoduleviewed'] = 'AI Escape Room viewed';

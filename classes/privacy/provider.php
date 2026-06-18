@@ -56,6 +56,11 @@ class provider implements
             'timecreated' => 'privacy:metadata:aiescape_messages:timecreated',
         ], 'privacy:metadata:aiescape_messages');
 
+        $collection->add_database_table('aiescape_flags', [
+            'keyword'     => 'privacy:metadata:aiescape_flags:keyword',
+            'timecreated' => 'privacy:metadata:aiescape_flags:timecreated',
+        ], 'privacy:metadata:aiescape_flags');
+
         return $collection;
     }
 
@@ -121,6 +126,7 @@ class provider implements
 
             foreach ($attempts as $attempt) {
                 $messages = $DB->get_records('aiescape_messages', ['attemptid' => $attempt->id], 'timecreated ASC');
+                $flags    = $DB->get_records('aiescape_flags', ['attemptid' => $attempt->id], 'timecreated ASC');
                 $data = (object) [
                     'status'        => $attempt->status,
                     'stepstally'    => $attempt->stepstally,
@@ -133,6 +139,10 @@ class provider implements
                         'message'     => $m->message,
                         'timecreated' => \core_privacy\local\request\transform::datetime($m->timecreated),
                     ], array_values($messages)),
+                    'flags' => array_map(fn($f) => (object) [
+                        'keyword'     => $f->keyword,
+                        'timecreated' => \core_privacy\local\request\transform::datetime($f->timecreated),
+                    ], array_values($flags)),
                 ];
                 writer::with_context($context)->export_data(['attempt_' . $attempt->id], $data);
             }
@@ -161,6 +171,7 @@ class provider implements
         $attemptids = $DB->get_fieldset_select('aiescape_attempts', 'id', 'aiescape = ?', [$aiescape->id]);
         if ($attemptids) {
             [$insql, $params] = $DB->get_in_or_equal($attemptids);
+            $DB->delete_records_select('aiescape_flags', "attemptid $insql", $params);
             $DB->delete_records_select('aiescape_messages', "attemptid $insql", $params);
         }
         $DB->delete_records('aiescape_attempts', ['aiescape' => $aiescape->id]);
@@ -195,6 +206,7 @@ class provider implements
             );
             if ($attemptids) {
                 [$insql, $params] = $DB->get_in_or_equal($attemptids);
+                $DB->delete_records_select('aiescape_flags', "attemptid $insql", $params);
                 $DB->delete_records_select('aiescape_messages', "attemptid $insql", $params);
             }
             $DB->delete_records('aiescape_attempts', ['aiescape' => $aiescape->id, 'userid' => $userid]);
@@ -235,6 +247,7 @@ class provider implements
 
         if ($attemptids) {
             [$insql, $params] = $DB->get_in_or_equal($attemptids);
+            $DB->delete_records_select('aiescape_flags', "attemptid $insql", $params);
             $DB->delete_records_select('aiescape_messages', "attemptid $insql", $params);
         }
         $DB->delete_records_select(

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/aiescape/db" VERSION="2026061000" COMMENT="XMLDB file for Moodle mod/aiescape"
+<XMLDB PATH="mod/aiescape/db" VERSION="2026061009" COMMENT="XMLDB file for Moodle mod/aiescape"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
@@ -26,6 +26,10 @@
         <FIELD NAME="showprogress" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="1" COMMENT="Whether to show step progress bar to student"/>
         <FIELD NAME="allowstudentreview" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether students can review their own past attempts"/>
         <FIELD NAME="partialscoreonquit" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Award partial score proportional to progress when student quits"/>
+        <FIELD NAME="showpremise" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the premise to students on the module page"/>
+        <FIELD NAME="showgoal" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the goal to students on the module page"/>
+        <FIELD NAME="showchoicecounts" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the good/neutral/bad choice counts to students on the module page"/>
+        <FIELD NAME="flagkeywords" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="One keyword/phrase per line; flags free-text student responses containing a match for teacher review"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
       </FIELDS>
@@ -80,10 +84,25 @@
         <FIELD NAME="prompt" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Prompt sent to AI when button is pressed"/>
         <FIELD NAME="sortorder" TYPE="int" LENGTH="6" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="defaultindex" TYPE="int" LENGTH="4" NOTNULL="false" SEQUENCE="false" COMMENT="1-5 index of global default button this was created from; null for custom buttons"/>
+        <FIELD NAME="usagelimit" TYPE="int" LENGTH="6" NOTNULL="false" SEQUENCE="false" COMMENT="Maximum times this button may be used per attempt; null means unlimited"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="aiescape" TYPE="foreign" FIELDS="aiescape" REFTABLE="aiescape" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="aiescape_flags" COMMENT="Messages flagged for teacher review by keyword match">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="attemptid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Foreign key to aiescape_attempts"/>
+        <FIELD NAME="messageid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Foreign key to aiescape_messages"/>
+        <FIELD NAME="keyword" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The keyword/phrase that matched"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="attemptid" TYPE="foreign" FIELDS="attemptid" REFTABLE="aiescape_attempts" REFFIELDS="id"/>
+        <KEY NAME="messageid" TYPE="foreign" FIELDS="messageid" REFTABLE="aiescape_messages" REFFIELDS="id"/>
       </KEYS>
     </TABLE>
   </TABLES>

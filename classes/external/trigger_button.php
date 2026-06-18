@@ -18,17 +18,17 @@ namespace mod_aiescape\external;
 
 use core_external\external_api;
 use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aiescape\attempt_manager;
-use mod_aiescape\ai\prompt_builder;
-use mod_aiescape\ai\response_parser;
 
 /**
  * Web service: fire a secondary action button.
  *
- * Sends the button's prompt to the AI without recording the exchange in
- * the conversation history or modifying the step tally.
+ * Persists the button's prompt as part of the conversation history (so it
+ * affects this and all subsequent AI turns) and returns the AI's single
+ * response. Does not modify the step tally.
  *
  * @package    mod_aiescape
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
@@ -80,37 +80,32 @@ class trigger_button extends external_api {
             throw new \moodle_exception('error:invalidattempt', 'mod_aiescape');
         }
 
-        // Find the last AI message for context.
-        $atman = new attempt_manager();
+        $atman    = new attempt_manager();
         $messages = $atman->get_attempt_messages($attempt->id);
-        $lastai = '';
-        foreach (array_reverse($messages) as $msg) {
-            if ($msg->role === 'assistant') {
-                $lastai = $msg->message;
-                break;
-            }
+
+        // Defense in depth: the client disables exhausted buttons proactively, but
+        // enforce the limit here too in case of a stale UI state or direct API use.
+        if (attempt_manager::usage_remaining($button, $messages) === 0) {
+            throw new \moodle_exception('error:buttonlimitreached', 'mod_aiescape');
         }
 
-        $builder = new prompt_builder();
-        $prompt  = $builder->build_button_prompt($button->prompt, $lastai, $aiescape);
+        // Persist the button's instruction into the conversation history so it
+        // affects this turn and every subsequent turn for the rest of the attempt.
+        $atman->record_message($attemptid, 'user', $button->prompt, $button->label, null);
+        $messages = $atman->get_attempt_messages($attempt->id);
 
-        $aiaction  = new \core_ai\aiactions\generate_text(
-            contextid: $context->id,
-            userid: $USER->id,
-            prompttext: $prompt
-        );
-        $aimanager = \core\di::get(\core_ai\manager::class);
-        $airesponse = $aimanager->process_action($aiaction);
+        $result = $atman->run_ai_turn($aiescape, $context, $USER->id, $messages, (int) $attempt->stepstally);
 
-        if (!$airesponse->get_success()) {
-            throw new \moodle_exception('error:aifailed', 'mod_aiescape');
-        }
+        // Record the AI response without applying any step change.
+        $atman->record_message($attemptid, 'assistant', $result['narrative'], null, null);
 
-        $rawtext = $airesponse->get_response_data()['generatedcontent'] ?? '';
-        $parser  = new response_parser();
-        $narrative = $parser->parse_button_response($rawtext);
+        $choices = in_array($aiescape->gamemode, ['multichoice', 'combo'], true) ? $result['choices'] : [];
 
-        return ['narrative' => $narrative];
+        return [
+            'narrative' => $result['narrative'],
+            'choices'   => $choices,
+            'remaining' => attempt_manager::usage_remaining($button, $messages),
+        ];
     }
 
     /**
@@ -121,6 +116,13 @@ class trigger_button extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'narrative' => new external_value(PARAM_RAW, 'AI response to the button prompt'),
+            'choices'   => new external_multiple_structure(
+                new external_single_structure([
+                    'label' => new external_value(PARAM_TEXT, 'Choice label'),
+                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, or bad'),
+                ])
+            ),
+            'remaining' => new external_value(PARAM_INT, 'Uses left this attempt; -1 means unlimited'),
         ]);
     }
 }

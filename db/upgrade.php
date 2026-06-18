@@ -95,5 +95,97 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026061004, 'aiescape');
     }
 
+    if ($oldversion < 2026061005) {
+        $table = new xmldb_table('aiescape');
+
+        $field = new xmldb_field('showpremisegoal', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'partialscoreonquit');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('showchoicecounts', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'showpremisegoal');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026061005, 'aiescape');
+    }
+
+    if ($oldversion < 2026061006) {
+        $table = new xmldb_table('aiescape');
+
+        $field = new xmldb_field('buttonusagelimit', XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '-1', 'showchoicecounts');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026061006, 'aiescape');
+    }
+
+    if ($oldversion < 2026061007) {
+        $table = new xmldb_table('aiescape');
+
+        $field = new xmldb_field('flagkeywords', XMLDB_TYPE_TEXT, null, null, null, null, null, 'buttonusagelimit');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $table = new xmldb_table('aiescape_flags');
+        if (!$dbman->table_exists($table)) {
+            $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+            $table->add_field('attemptid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('messageid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('keyword', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+            $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+            $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $table->add_key('attemptid', XMLDB_KEY_FOREIGN, ['attemptid'], 'aiescape_attempts', ['id']);
+            $table->add_key('messageid', XMLDB_KEY_FOREIGN, ['messageid'], 'aiescape_messages', ['id']);
+
+            $dbman->create_table($table);
+        }
+
+        upgrade_mod_savepoint(true, 2026061007, 'aiescape');
+    }
+
+    if ($oldversion < 2026061008) {
+        $table = new xmldb_table('aiescape');
+
+        // Replace the combined showpremisegoal toggle with two independent checkboxes.
+        $field = new xmldb_field('showpremisegoal', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'partialscoreonquit');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->rename_field($table, $field, 'showpremise');
+        }
+
+        $field = new xmldb_field('showpremise', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'goal');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('showgoal', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'showpremise');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026061008, 'aiescape');
+    }
+
+    if ($oldversion < 2026061009) {
+        // Replace the single activity-wide usage limit with a per-button limit.
+        $table = new xmldb_table('aiescape');
+        $field = new xmldb_field('buttonusagelimit', XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '-1', 'showchoicecounts');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        $table = new xmldb_table('aiescape_buttons');
+        $field = new xmldb_field('usagelimit', XMLDB_TYPE_INTEGER, '6', null, null, null, null, 'defaultindex');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026061009, 'aiescape');
+    }
+
     return true;
 }
