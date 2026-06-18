@@ -71,6 +71,12 @@ Teachers can configure a list of keywords or phrases (one per line, case-insensi
 
 A fullscreen toggle button in the top-right corner of the game interface lets students expand the activity to fill the browser window. The chat log expands to use the available height. The button is hidden automatically on browsers that do not support the Fullscreen API.
 
+### Teacher preview
+
+Non-editing teachers, editing teachers, and managers can click "Start Game" and play through the activity themselves, exactly like a student. These preview attempts are tracked separately from real student attempts and are excluded from attempt limits, gradebook/completion updates, and the attempts report (including the flagged-messages view) — previewing never affects real student data, and a previewing teacher never shows up as a "student" in the report.
+
+In multiple choice and combo modes, enabling **Show choice type on hover (preview only)** reveals each choice button's good/neutral/bad type via a tooltip and a colour-coded (green/grey/red) hover background, to help teachers sanity-check their premise/goal configuration. This is only visible to users with the `viewreports` capability; real students never see it.
+
 ## Activity settings
 
 | Setting | Description |
@@ -91,6 +97,7 @@ A fullscreen toggle button in the top-right corner of the game interface lets st
 | Allow student review | Let students re-read completed attempts |
 | Partial score on quit | Award proportional grade when a student quits early |
 | Show choice counts to students | Display the good/neutral/bad choice counts on the module page (multichoice/combo only) |
+| Show choice type on hover (preview only) | While previewing, reveal each choice's good/neutral/bad type on hover (multichoice/combo only); never shown to real students |
 | Flag keywords | One keyword/phrase per line; flags matching free-text responses for teacher review |
 | Additional buttons | Extra one-click prompt buttons added to the game interface, each with its own optional usage limit |
 

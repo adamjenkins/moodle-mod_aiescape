@@ -4,6 +4,11 @@ All notable changes to `mod_aiescape` are documented in this file.
 
 ## Unreleased
 
+### Added
+
+- **Teacher preview** — non-editing teachers, editing teachers, and managers can now click "Start Game" and play through the activity themselves. These preview attempts are tracked separately (`ispreview`) and are excluded from attempt limits, gradebook/completion updates, and the attempts report/flagged-messages views, so previewing never affects real student data or shows up as a "student" in the report.
+- **Show choice type on hover (preview only)** — an optional setting (multichoice/combo only) that, while previewing, reveals whether each choice button is good/neutral/bad via a tooltip and a green/grey/red hover background. Only visible to users with the view-reports capability; real students never see it.
+
 ### Fixed
 
 - The activity description no longer renders twice on the module page. Moodle's core activity header already displays it once inside `$OUTPUT->header()`; the plugin's duplicate manual `echo` has been removed.
@@ -20,5 +25,7 @@ All notable changes to `mod_aiescape` are documented in this file.
 ### Changed
 
 - Database schema: added `aiescape.showpremise`, `aiescape.showgoal`, `aiescape.showchoicecounts`, `aiescape.flagkeywords`, `aiescape_buttons.usagelimit`, and the new `aiescape_flags` table.
+- Database schema: added `aiescape.previewhoverhints` and `aiescape_attempts.ispreview`.
+- `mod/aiescape:play` is now granted to the `teacher`, `editingteacher`, and `manager` archetypes (previously `student` only), enabling teacher preview.
 - Refactored the shared "build prompt → call AI → parse → correct choice counts" logic out of `send_message` into `attempt_manager::run_ai_turn()`, used by both normal turns and button turns.
 - Privacy provider (`\mod_aiescape\privacy\provider`) updated to export/delete `aiescape_flags` data alongside attempts and messages.

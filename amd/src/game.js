@@ -36,6 +36,8 @@ function(Ajax, Notification, Templates, Str) {
     var showProgress = false;
     /** @type {boolean} Whether input is currently disabled */
     var busy = false;
+    /** @type {boolean} Whether to reveal each choice's good/neutral/bad type on hover (preview only) */
+    var choiceHints = false;
 
     /**
      * Wrapper around core/str get_string.
@@ -250,6 +252,13 @@ function(Ajax, Notification, Templates, Str) {
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'btn btn-primary';
+            if (choiceHints) {
+                btn.classList.add('aiescape-choice-hint-' + choice.type);
+                getString('choicehint_' + choice.type, 'mod_aiescape').then(function(label) {
+                    btn.title = label;
+                    return label;
+                }).catch(Notification.exception);
+            }
             btn.textContent = choice.label;
             btn.addEventListener('click', function() {
                 container.innerHTML = '';
@@ -532,9 +541,11 @@ function(Ajax, Notification, Templates, Str) {
          * Initialises the game module.
          *
          * @param {number} cmidParam Course module id
+         * @param {boolean} showChoiceHints Whether to reveal choice types on hover (preview only)
          */
-        init: function(cmidParam) {
+        init: function(cmidParam, showChoiceHints) {
             cmid = cmidParam;
+            choiceHints = !!showChoiceHints;
 
             var startBtn = document.getElementById('aiescape-start-btn');
             if (startBtn) {

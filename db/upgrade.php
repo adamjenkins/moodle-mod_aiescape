@@ -187,5 +187,24 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026061009, 'aiescape');
     }
 
+    if ($oldversion < 2026061010) {
+        // Teachers/managers can now preview the activity; mark their attempts so they
+        // are excluded from attempt limits, grading, completion, and reports.
+        $table = new xmldb_table('aiescape_attempts');
+        $field = new xmldb_field('ispreview', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'timecompleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // New setting: reveal choice type (good/neutral/bad) on hover while previewing.
+        $table = new xmldb_table('aiescape');
+        $field = new xmldb_field('previewhoverhints', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'showchoicecounts');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026061010, 'aiescape');
+    }
+
     return true;
 }

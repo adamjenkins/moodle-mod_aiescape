@@ -66,3 +66,19 @@ body.path-mod-aiescape [role="main"] > * {
     background-color: #f8d7da;
     color: #58151c;
 }
+
+/* Preview-only hover hints revealing each choice's good/neutral/bad type. */
+#aiescape-choices button.aiescape-choice-hint-good:hover {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+#aiescape-choices button.aiescape-choice-hint-neutral:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+#aiescape-choices button.aiescape-choice-hint-bad:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}

@@ -81,6 +81,11 @@ $string['showchoicecounts_help'] = 'If enabled, the number of good/neutral/bad c
 $string['choicecount_good'] = '{$a} good';
 $string['choicecount_neutral'] = '{$a} neutral';
 $string['choicecount_bad'] = '{$a} bad';
+$string['previewhoverhints'] = 'Show choice type on hover (preview only)';
+$string['previewhoverhints_help'] = 'If enabled, hovering over a choice button will reveal whether it is good, neutral, or bad. This only applies to users who can view reports (teachers and managers previewing the activity) — real students never see this. Not applicable in free text mode.';
+$string['choicehint_good'] = 'Good choice';
+$string['choicehint_neutral'] = 'Neutral choice';
+$string['choicehint_bad'] = 'Bad choice';
 
 // Settings form — moderation section.
 $string['moderationsection'] = 'Moderation';

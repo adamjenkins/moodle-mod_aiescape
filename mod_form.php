@@ -166,6 +166,11 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $mform->addHelpButton('showchoicecounts', 'showchoicecounts', 'mod_aiescape');
         $mform->hideIf('showchoicecounts', 'gamemode', 'eq', 'freetext');
 
+        $mform->addElement('selectyesno', 'previewhoverhints', get_string('previewhoverhints', 'mod_aiescape'));
+        $mform->setDefault('previewhoverhints', 0);
+        $mform->addHelpButton('previewhoverhints', 'previewhoverhints', 'mod_aiescape');
+        $mform->hideIf('previewhoverhints', 'gamemode', 'eq', 'freetext');
+
         // Moderation section.
         $mform->addElement('header', 'moderationsection', get_string('moderationsection', 'mod_aiescape'));
 

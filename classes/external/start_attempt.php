@@ -57,10 +57,11 @@ class start_attempt extends external_api {
         $context = \context_module::instance($cm->id);
         self::validate_context($context);
         require_capability('mod/aiescape:play', $context);
+        $ispreview = has_capability('mod/aiescape:viewreports', $context);
 
         $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance], '*', MUST_EXIST);
         $manager  = new attempt_manager();
-        $attempt  = $manager->get_or_create_attempt($aiescape, $USER->id);
+        $attempt  = $manager->get_or_create_attempt($aiescape, $USER->id, $ispreview);
         $messages = $manager->get_attempt_messages($attempt->id);
         $buttons  = $DB->get_records('aiescape_buttons', ['aiescape' => $aiescape->id], 'sortorder ASC');
 
@@ -84,7 +85,7 @@ class start_attempt extends external_api {
             'messages'    => $messagelist,
             'buttons'     => $buttonlist,
             'completed'   => $attempt->status === 'completed',
-            'canrestart'  => $manager->can_start_new_attempt($aiescape, $USER->id),
+            'canrestart'  => $manager->can_start_new_attempt($aiescape, $USER->id, $ispreview),
         ];
     }
 

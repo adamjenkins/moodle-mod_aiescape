@@ -81,7 +81,7 @@ class quit_attempt extends external_api {
         return [
             'abandoned' => true,
             'grade'     => $grade,
-            'canrestart' => $manager->can_start_new_attempt($aiescape, $USER->id),
+            'canrestart' => $manager->can_start_new_attempt($aiescape, $USER->id, (bool) $attempt->ispreview),
         ];
     }
 

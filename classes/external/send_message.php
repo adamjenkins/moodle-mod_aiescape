@@ -149,7 +149,7 @@ class send_message extends external_api {
             'narrative'  => $result['narrative'],
             'choices'    => $result['choices'],
             'completed'  => $completed,
-            'canrestart' => $atman->can_start_new_attempt($aiescape, $USER->id),
+            'canrestart' => $atman->can_start_new_attempt($aiescape, $USER->id, (bool) $attempt->ispreview),
             'tally'      => (int) $attempt->stepstally,
             'steps'      => (int) $aiescape->steps,
             'stepchange' => $stepchange,

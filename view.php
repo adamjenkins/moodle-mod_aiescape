@@ -95,8 +95,11 @@ if (!empty($aiescape->showchoicecounts) && $aiescape->gamemode !== 'freetext') {
 
 // Teacher view: show attempt stats and link to report.
 if (has_capability('mod/aiescape:viewreports', $context)) {
-    $totalattempts = $DB->count_records('aiescape_attempts', ['aiescape' => $aiescape->id]);
-    $completed     = $DB->count_records('aiescape_attempts', ['aiescape' => $aiescape->id, 'status' => 'completed']);
+    $totalattempts = $DB->count_records('aiescape_attempts', ['aiescape' => $aiescape->id, 'ispreview' => 0]);
+    $completed     = $DB->count_records(
+        'aiescape_attempts',
+        ['aiescape' => $aiescape->id, 'status' => 'completed', 'ispreview' => 0]
+    );
 
     echo $OUTPUT->box_start('generalbox');
     echo html_writer::tag('p', get_string('attempts', 'mod_aiescape') . ': ' . $totalattempts);
@@ -109,7 +112,7 @@ if (has_capability('mod/aiescape:viewreports', $context)) {
             'SELECT COUNT(f.id)
                FROM {aiescape_flags} f
                JOIN {aiescape_attempts} aa ON aa.id = f.attemptid
-              WHERE aa.aiescape = :aiescape',
+              WHERE aa.aiescape = :aiescape AND aa.ispreview = 0',
             ['aiescape' => $aiescape->id]
         );
         $flaggedurl = new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id, 'flagged' => 1]);
@@ -197,7 +200,12 @@ $templatecontext = [
 
 echo $OUTPUT->render_from_template('mod_aiescape/view', $templatecontext);
 
-$PAGE->requires->js_call_amd('mod_aiescape/game', 'init', [$cm->id]);
+// While previewing, optionally reveal each choice's good/neutral/bad type on hover.
+$showchoicehints = !empty($aiescape->previewhoverhints)
+    && has_capability('mod/aiescape:viewreports', $context)
+    && in_array($aiescape->gamemode, ['multichoice', 'combo'], true);
+
+$PAGE->requires->js_call_amd('mod_aiescape/game', 'init', [$cm->id, $showchoicehints]);
 
 echo html_writer::end_div();
 echo $OUTPUT->footer();

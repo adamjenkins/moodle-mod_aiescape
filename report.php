@@ -62,7 +62,7 @@ if ($flagged) {
               FROM {aiescape_flags} f
               JOIN {aiescape_messages} m ON m.id = f.messageid
               JOIN {aiescape_attempts} aa ON aa.id = f.attemptid
-             WHERE aa.aiescape = :aiescape
+             WHERE aa.aiescape = :aiescape AND aa.ispreview = 0
           ORDER BY f.timecreated DESC";
     $flags = $DB->get_records_sql($sql, ['aiescape' => $aiescape->id]);
 
@@ -162,7 +162,7 @@ if ($attemptid) {
 // View 2: attempts for one student.
 if ($userid) {
     // Ensure the requested user has data in this activity before disclosing their name.
-    if (!$DB->record_exists('aiescape_attempts', ['aiescape' => $aiescape->id, 'userid' => $userid])) {
+    if (!$DB->record_exists('aiescape_attempts', ['aiescape' => $aiescape->id, 'userid' => $userid, 'ispreview' => 0])) {
         redirect(new moodle_url('/mod/aiescape/report.php', ['id' => $cm->id]));
     }
     $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
@@ -233,6 +233,14 @@ $identityfields = \core_user\fields::get_identity_fields($context, false);
 // Fetch enrolled students (play cap) and anyone who has attempted.
 $enrolled = get_enrolled_users($context, 'mod/aiescape:play', 0, 'u.*');
 
+// Teachers/managers also hold the play capability (so they can preview), but their
+// preview attempts shouldn't make them show up in the student report list.
+foreach ($enrolled as $enrolledid => $enrolleduser) {
+    if (has_capability('mod/aiescape:viewreports', $context, $enrolleduser->id)) {
+        unset($enrolled[$enrolledid]);
+    }
+}
+
 $baseuserfields = [
     'id', 'firstname', 'lastname', 'email', 'firstnamephonetic', 'lastnamephonetic',
     'middlename', 'alternatename', 'picture', 'imagealt', 'deleted',
@@ -251,8 +259,13 @@ $sql = "SELECT DISTINCT u.id, u.firstname, u.lastname, u.email, u.firstnamephone
                {$extraselect}
           FROM {user} u
           JOIN {aiescape_attempts} aa ON aa.userid = u.id
-         WHERE aa.aiescape = :aiescape";
+         WHERE aa.aiescape = :aiescape AND aa.ispreview = 0";
 $attemptors = $DB->get_records_sql($sql, ['aiescape' => $aiescape->id]);
+foreach ($attemptors as $attemptorid => $attemptor) {
+    if (has_capability('mod/aiescape:viewreports', $context, $attemptor->id)) {
+        unset($attemptors[$attemptorid]);
+    }
+}
 
 $students = $enrolled + array_diff_key($attemptors, $enrolled);
 

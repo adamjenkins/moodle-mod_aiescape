@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/aiescape/db" VERSION="2026061009" COMMENT="XMLDB file for Moodle mod/aiescape"
+<XMLDB PATH="mod/aiescape/db" VERSION="2026061010" COMMENT="XMLDB file for Moodle mod/aiescape"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
@@ -29,6 +29,7 @@
         <FIELD NAME="showpremise" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the premise to students on the module page"/>
         <FIELD NAME="showgoal" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the goal to students on the module page"/>
         <FIELD NAME="showchoicecounts" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the good/neutral/bad choice counts to students on the module page"/>
+        <FIELD NAME="previewhoverhints" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether teachers previewing the activity see the good/neutral/bad choice type on hover"/>
         <FIELD NAME="flagkeywords" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="One keyword/phrase per line; flags free-text student responses containing a match for teacher review"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
@@ -48,6 +49,7 @@
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp when attempt was completed"/>
+        <FIELD NAME="ispreview" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether this attempt was made by a teacher/manager previewing the activity"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

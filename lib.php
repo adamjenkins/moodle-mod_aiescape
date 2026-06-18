@@ -285,7 +285,7 @@ function aiescape_get_user_grades($aiescape, $userid = 0) {
 
     // Full grade from any completed attempt.
     $params = array_merge(['aiescape' => $aiescape->id, 'status' => 'completed'], $userid ? ['userid' => $userid] : []);
-    $where  = 'aiescape = :aiescape AND status = :status' . ($userid ? ' AND userid = :userid' : '');
+    $where  = 'aiescape = :aiescape AND status = :status AND ispreview = 0' . ($userid ? ' AND userid = :userid' : '');
     $completed = $DB->get_records_select('aiescape_attempts', $where, $params, 'timecompleted ASC');
     $grades = [];
 
@@ -301,7 +301,7 @@ function aiescape_get_user_grades($aiescape, $userid = 0) {
     // Partial grade from abandoned attempts when the setting is on.
     if (!empty($aiescape->partialscoreonquit) && (int) $aiescape->steps > 0) {
         $params = array_merge(['aiescape' => $aiescape->id, 'status' => 'abandoned'], $userid ? ['userid' => $userid] : []);
-        $where  = 'aiescape = :aiescape AND status = :status' . ($userid ? ' AND userid = :userid' : '');
+        $where  = 'aiescape = :aiescape AND status = :status AND ispreview = 0' . ($userid ? ' AND userid = :userid' : '');
         $abandoned = $DB->get_records_select('aiescape_attempts', $where, $params, 'timecompleted ASC');
 
         foreach ($abandoned as $attempt) {

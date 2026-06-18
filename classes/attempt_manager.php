@@ -29,13 +29,14 @@ class attempt_manager {
      *
      * @param int $aiescape Activity instance id
      * @param int $userid
+     * @param bool $ispreview Whether to look up a preview attempt rather than a real one
      * @return stdClass|null
      */
-    public function get_active_attempt(int $aiescape, int $userid): ?\stdClass {
+    public function get_active_attempt(int $aiescape, int $userid, bool $ispreview = false): ?\stdClass {
         global $DB;
         return $DB->get_record(
             'aiescape_attempts',
-            ['aiescape' => $aiescape, 'userid' => $userid, 'status' => 'inprogress']
+            ['aiescape' => $aiescape, 'userid' => $userid, 'status' => 'inprogress', 'ispreview' => $ispreview ? 1 : 0]
         ) ?: null;
     }
 
@@ -44,16 +45,24 @@ class attempt_manager {
      *
      * @param stdClass $aiescape The activity record
      * @param int      $userid
+     * @param bool     $ispreview Preview attempts are never subject to the attempt limit
      * @return bool
      */
-    public function can_start_new_attempt(\stdClass $aiescape, int $userid): bool {
+    public function can_start_new_attempt(\stdClass $aiescape, int $userid, bool $ispreview = false): bool {
         global $DB;
+
+        if ($ispreview) {
+            return true;
+        }
 
         if ((int) $aiescape->maxattempts === -1) {
             return true;
         }
 
-        $count = $DB->count_records('aiescape_attempts', ['aiescape' => $aiescape->id, 'userid' => $userid]);
+        $count = $DB->count_records(
+            'aiescape_attempts',
+            ['aiescape' => $aiescape->id, 'userid' => $userid, 'ispreview' => 0]
+        );
         return $count < (int) $aiescape->maxattempts;
     }
 
@@ -64,17 +73,18 @@ class attempt_manager {
      *
      * @param stdClass $aiescape The activity record
      * @param int      $userid
+     * @param bool     $ispreview Whether this is a teacher/manager preview attempt
      * @return stdClass The attempt record
      */
-    public function get_or_create_attempt(\stdClass $aiescape, int $userid): \stdClass {
+    public function get_or_create_attempt(\stdClass $aiescape, int $userid, bool $ispreview = false): \stdClass {
         global $DB;
 
-        $attempt = $this->get_active_attempt($aiescape->id, $userid);
+        $attempt = $this->get_active_attempt($aiescape->id, $userid, $ispreview);
         if ($attempt) {
             return $attempt;
         }
 
-        if (!$this->can_start_new_attempt($aiescape, $userid)) {
+        if (!$this->can_start_new_attempt($aiescape, $userid, $ispreview)) {
             throw new \moodle_exception('error:maxattemptsreached', 'mod_aiescape');
         }
 
@@ -84,6 +94,7 @@ class attempt_manager {
         $record->userid       = $userid;
         $record->status       = 'inprogress';
         $record->stepstally   = 0;
+        $record->ispreview    = $ispreview ? 1 : 0;
         $record->timecreated  = $now;
         $record->timemodified = $now;
 
@@ -107,12 +118,17 @@ class attempt_manager {
      *
      * @param int $aiescape
      * @param int $userid
+     * @param bool $includepreview Whether to include teacher/manager preview attempts
      * @return stdClass[]
      */
-    public function get_user_attempts(int $aiescape, int $userid): array {
+    public function get_user_attempts(int $aiescape, int $userid, bool $includepreview = false): array {
         global $DB;
+        $conditions = ['aiescape' => $aiescape, 'userid' => $userid];
+        if (!$includepreview) {
+            $conditions['ispreview'] = 0;
+        }
         return array_values(
-            $DB->get_records('aiescape_attempts', ['aiescape' => $aiescape, 'userid' => $userid], 'timecreated DESC')
+            $DB->get_records('aiescape_attempts', $conditions, 'timecreated DESC')
         );
     }
 
@@ -334,7 +350,11 @@ class attempt_manager {
         $DB->update_record('aiescape_attempts', $attempt);
 
         $grade = 0.0;
-        if (!empty($aiescape->partialscoreonquit) && (int) $aiescape->steps > 0) {
+        if (
+            empty($attempt->ispreview) &&
+            !empty($aiescape->partialscoreonquit) &&
+            (int) $aiescape->steps > 0
+        ) {
             $grade = (float) $aiescape->grade
                 * min(1.0, (int) $attempt->stepstally / (int) $aiescape->steps);
             aiescape_update_grades($aiescape, $attempt->userid);
@@ -374,13 +394,15 @@ class attempt_manager {
         $attempt->timecompleted = $now;
         $DB->update_record('aiescape_attempts', $attempt);
 
-        // Update the gradebook.
-        aiescape_update_grades($aiescape, $attempt->userid);
+        if (empty($attempt->ispreview)) {
+            // Update the gradebook.
+            aiescape_update_grades($aiescape, $attempt->userid);
 
-        // Update Moodle activity completion.
-        $completion = new \completion_info($course);
-        if ($completion->is_enabled($cm)) {
-            $completion->update_state($cm, COMPLETION_COMPLETE, $attempt->userid);
+            // Update Moodle activity completion.
+            $completion = new \completion_info($course);
+            if ($completion->is_enabled($cm)) {
+                $completion->update_state($cm, COMPLETION_COMPLETE, $attempt->userid);
+            }
         }
 
         // Fire completion event.
