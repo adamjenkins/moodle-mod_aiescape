@@ -156,6 +156,9 @@ class prompt_builder {
 
     /**
      * Returns true when the activity uses persona style.
+     *
+     * @param stdClass $aiescape The activity record
+     * @return bool
      */
     private function is_persona(\stdClass $aiescape): bool {
         return !empty($aiescape->gamestyle) && $aiescape->gamestyle === 'persona';
@@ -163,6 +166,9 @@ class prompt_builder {
 
     /**
      * Returns the trimmed persona name, or an empty string.
+     *
+     * @param stdClass $aiescape The activity record
+     * @return string
      */
     private function persona_name(\stdClass $aiescape): string {
         return trim((string) ($aiescape->personaname ?? ''));
@@ -170,6 +176,15 @@ class prompt_builder {
 
     /**
      * Builds the system instructions block.
+     *
+     * @param stdClass $aiescape  The activity record
+     * @param int      $tally     Current step tally
+     * @param bool     $ispersona Whether the activity uses persona style
+     * @param string   $name      The persona name, if any
+     * @param int      $good      Number of good choices required
+     * @param int      $neutral   Number of neutral choices required
+     * @param int      $bad       Number of bad choices required
+     * @return string
      */
     private function system_instructions(
         \stdClass $aiescape,
@@ -315,6 +330,11 @@ class prompt_builder {
 
     /**
      * Returns a human-readable summary of required type counts, e.g. "2 good, 1 neutral, 0 bad".
+     *
+     * @param int $good    Number of good choices required
+     * @param int $neutral Number of neutral choices required
+     * @param int $bad     Number of bad choices required
+     * @return string
      */
     private function type_count_summary(int $good, int $neutral, int $bad): string {
         $parts = [];
@@ -335,6 +355,11 @@ class prompt_builder {
 
     /**
      * Serialises conversation history into the prompt.
+     *
+     * @param array  $messages  Array of message records, oldest first
+     * @param bool   $ispersona Whether the activity uses persona style
+     * @param string $name      The persona name, if any
+     * @return string
      */
     private function serialise_history(array $messages, bool $ispersona, string $name): string {
         if (empty($messages)) {
@@ -356,6 +381,14 @@ class prompt_builder {
 
     /**
      * Returns the JSON output format instructions for the given game mode and style.
+     *
+     * @param string $mode      The game mode
+     * @param bool   $ispersona Whether the activity uses persona style
+     * @param string $name      The persona name, if any
+     * @param int    $good      Number of good choices required
+     * @param int    $neutral   Number of neutral choices required
+     * @param int    $bad       Number of bad choices required
+     * @return string
      */
     private function output_format_instructions(
         string $mode,

@@ -45,10 +45,9 @@ class restore_aiescape_activity_task extends restore_activity_task {
     }
 
     /**
-     * Decodes URLs after restore.
+     * Defines decode contents for this restore task.
      *
-     * @param string $content
-     * @return string
+     * @return array
      */
     public static function define_decode_contents() {
         return [];

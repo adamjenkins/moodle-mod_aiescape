@@ -8,6 +8,14 @@
     * message - completion detail string
     * newattempturl - URL to start a new attempt (empty string if no more attempts allowed)
     * newattemptlabel - label for the new attempt button
+
+    Example context (json):
+    {
+        "title": "Congratulations!",
+        "message": "You escaped the room.",
+        "newattempturl": "https://example.com/mod/aiescape/view.php?id=2",
+        "newattemptlabel": "Start a new attempt"
+    }
 }}
 <div class="alert alert-success d-flex align-items-center gap-3 mt-3" role="alert">
     <i class="fa fa-check-circle fa-2x" aria-hidden="true"></i>

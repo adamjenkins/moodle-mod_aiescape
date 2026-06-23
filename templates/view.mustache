@@ -21,6 +21,27 @@
     * aiproviderlabel - string (optional AI info for teachers)
     * quitlabel - string
     * quitconfirm - string
+
+    Example context (json):
+    {
+        "cmid": 2,
+        "gamemode": "combo",
+        "showprogress": true,
+        "steps": 5,
+        "ismultichoice": true,
+        "isfreetext": true,
+        "sendlabel": "Send",
+        "waitinglabel": "Waiting for response...",
+        "progresslabel": "Progress: 0 / 5",
+        "placeholder": "Type your response...",
+        "allowreview": true,
+        "myattemptsurl": "https://example.com/mod/aiescape/myattempts.php?id=2",
+        "myattemptslabel": "My attempts",
+        "startlabel": "Start Game",
+        "aiproviderlabel": "",
+        "quitlabel": "Quit",
+        "quitconfirm": "Are you sure you want to quit?"
+    }
 }}
 {{#aiproviderlabel}}
 <p class="text-muted small mb-2">

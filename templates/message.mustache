@@ -7,6 +7,13 @@
     * role - 'user' or 'assistant'
     * message - message text (plain text, will be escaped)
     * isuser - boolean
+
+    Example context (json):
+    {
+        "role": "user",
+        "message": "I open the door.",
+        "isuser": true
+    }
 }}
 <div class="aiescape-message d-flex mb-2 {{#isuser}}justify-content-end{{/isuser}}{{^isuser}}justify-content-start{{/isuser}}">
     <div class="card {{#isuser}}text-bg-primary{{/isuser}}{{^isuser}}bg-light{{/isuser}} p-2 px-3"
