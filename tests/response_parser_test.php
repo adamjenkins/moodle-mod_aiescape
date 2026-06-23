@@ -61,11 +61,12 @@ final class response_parser_test extends advanced_testcase {
      */
     public function test_parse_strips_markdown_code_fences(): void {
         $parser = new response_parser();
-        $json = "```json\n" . json_encode([
+        $fence = str_repeat(chr(96), 3);
+        $json = $fence . "json\n" . json_encode([
             'narrative'  => 'Fenced response.',
             'completed'  => false,
             'stepchange' => 0,
-        ]) . "\n```";
+        ]) . "\n" . $fence;
 
         $result = $parser->parse($json, 'freetext');
 

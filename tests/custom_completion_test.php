@@ -16,10 +16,13 @@
 
 declare(strict_types=1);
 
-namespace mod_aiescape\completion;
+namespace mod_aiescape;
 
 use advanced_testcase;
+use mod_aiescape\completion\custom_completion;
 use PHPUnit\Framework\Attributes\CoversClass;
+
+defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir . '/completionlib.php');

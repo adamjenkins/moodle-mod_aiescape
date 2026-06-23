@@ -66,7 +66,7 @@ function xmldb_aiescape_upgrade($oldversion) {
             $dbman->add_field($table, $field);
         }
 
-        $field = new xmldb_field('personaname', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, '', 'gamestyle');
+        $field = new xmldb_field('personaname', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'gamestyle');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
