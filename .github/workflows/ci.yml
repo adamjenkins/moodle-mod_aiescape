@@ -3,7 +3,29 @@ name: Moodle Plugin CI
 on: [push, pull_request]
 
 jobs:
+  matrix-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Compute test matrix
+        id: set-matrix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Reduced matrix for PRs: latest Moodle branch only, both databases, both supported PHP versions.
+            echo 'matrix={"include":[
+              {"php":"8.3","moodle-branch":"MOODLE_502_STABLE","database":"pgsql"},
+              {"php":"8.3","moodle-branch":"MOODLE_502_STABLE","database":"mariadb"},
+              {"php":"8.4","moodle-branch":"MOODLE_502_STABLE","database":"pgsql"},
+              {"php":"8.4","moodle-branch":"MOODLE_502_STABLE","database":"mariadb"}
+            ]}' | tr -d '\n' >> "$GITHUB_OUTPUT"
+          else
+            # Full matrix on push: every supported PHP version against every supported Moodle branch and DB.
+            echo 'matrix={"php":["8.2","8.3","8.4"],"moodle-branch":["MOODLE_500_STABLE","MOODLE_501_STABLE","MOODLE_502_STABLE"],"database":["pgsql","mariadb"]}' >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: matrix-setup
     runs-on: ubuntu-latest
 
     services:
@@ -37,10 +59,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        php: ['8.2', '8.3']
-        moodle-branch: ['MOODLE_500_STABLE', 'MOODLE_501_STABLE', 'MOODLE_502_STABLE']
-        database: [pgsql, mariadb]
+      matrix: ${{ fromJson(needs.matrix-setup.outputs.matrix) }}
 
     steps:
       - name: Check out repository code
@@ -59,6 +78,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18.20'
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ runner.os }}-php${{ matrix.php }}-moodle-plugin-ci-v4
+          restore-keys: |
+            composer-${{ runner.os }}-php${{ matrix.php }}-
+            composer-${{ runner.os }}-
 
       - name: Initialise moodle-plugin-ci
         run: |
@@ -108,12 +136,10 @@ jobs:
       - name: Mustache Lint
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci mustache
-        continue-on-error: true
 
       - name: Grunt
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci grunt
-        continue-on-error: true
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
@@ -122,4 +148,3 @@ jobs:
       - name: Behat features
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci behat --profile chrome
-        continue-on-error: true

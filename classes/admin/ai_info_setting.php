@@ -88,7 +88,7 @@ class ai_info_setting extends \admin_setting {
                 $model = $actionconfig[$key]['settings']['model'];
             }
 
-            $endpoint = $config['endpoint'] ?? '';
+            $endpoint = $this->redact_credentials($config['endpoint'] ?? '');
 
             $rows[] = \html_writer::tag(
                 'tr',
@@ -118,5 +118,15 @@ class ai_info_setting extends \admin_setting {
             \html_writer::div($table, 'form-setting'),
             'form-item row mb-3'
         );
+    }
+
+    /**
+     * Masks any userinfo (e.g. embedded API keys or basic-auth credentials) in a URL.
+     *
+     * @param string $endpoint The endpoint URL.
+     * @return string The endpoint with embedded credentials replaced by asterisks.
+     */
+    protected function redact_credentials(string $endpoint): string {
+        return preg_replace('#//[^/@\s]+@#', '//***:***@', $endpoint) ?? $endpoint;
     }
 }

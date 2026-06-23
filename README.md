@@ -119,6 +119,18 @@ This plugin stores the following personal data:
 
 All personal data is exportable and deletable via Moodle's Privacy API (`\mod_aiescape\privacy\provider`).
 
+Student messages, together with the activity's premise, goal, and conversation history, are sent to the AI provider configured by the site administrator (Site administration → AI → AI providers) so it can generate a response. This third-party data sharing is disclosed in the plugin's privacy metadata.
+
+## Testing
+
+PHPUnit and Behat coverage live under `tests/`. From the Moodle root, with the plugin installed at `mod/aiescape`:
+
+```sh
+php admin/tool/phpunit/cli/init.php          # one-time environment setup
+vendor/bin/phpunit --testsuite=mod_aiescape_testsuite
+vendor/bin/behat --tags=@mod_aiescape
+```
+
 ## License
 
 GNU GPL v3 or later — https://www.gnu.org/licenses/gpl-3.0.html

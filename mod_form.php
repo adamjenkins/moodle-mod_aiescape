@@ -116,18 +116,27 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $mform->setDefault('choicesgood', 1);
         $mform->addHelpButton('choicesgood', 'choicesgood', 'mod_aiescape');
         $mform->hideIf('choicesgood', 'gamemode', 'eq', 'freetext');
+        $mform->addRule('choicesgood', get_string('error:choicescountinvalid', 'mod_aiescape'), 'numeric', null, 'client');
 
         $mform->addElement('text', 'choicesneutral', get_string('choicesneutral', 'mod_aiescape'), ['size' => 3]);
         $mform->setType('choicesneutral', PARAM_INT);
         $mform->setDefault('choicesneutral', 1);
         $mform->addHelpButton('choicesneutral', 'choicesneutral', 'mod_aiescape');
         $mform->hideIf('choicesneutral', 'gamemode', 'eq', 'freetext');
+        $mform->addRule(
+            'choicesneutral',
+            get_string('error:choicescountinvalid', 'mod_aiescape'),
+            'numeric',
+            null,
+            'client'
+        );
 
         $mform->addElement('text', 'choicesbad', get_string('choicesbad', 'mod_aiescape'), ['size' => 3]);
         $mform->setType('choicesbad', PARAM_INT);
         $mform->setDefault('choicesbad', 1);
         $mform->addHelpButton('choicesbad', 'choicesbad', 'mod_aiescape');
         $mform->hideIf('choicesbad', 'gamemode', 'eq', 'freetext');
+        $mform->addRule('choicesbad', get_string('error:choicescountinvalid', 'mod_aiescape'), 'numeric', null, 'client');
 
         $mform->addElement('text', 'steps', get_string('steps', 'mod_aiescape'), ['size' => 5]);
         $mform->setType('steps', PARAM_INT);

@@ -45,6 +45,10 @@ class restore_aiescape_activity_structure_step extends restore_activity_structur
                 'aiescape_message',
                 '/activity/aiescape/attempts/attempt/messages/message'
             );
+            $paths[] = new restore_path_element(
+                'aiescape_flag',
+                '/activity/aiescape/attempts/attempt/flags/flag'
+            );
         }
 
         return $this->prepare_activity_structure($paths);
@@ -112,7 +116,23 @@ class restore_aiescape_activity_structure_step extends restore_activity_structur
         $data            = (object) $data;
         $data->attemptid = $this->get_new_parentid('aiescape_attempt');
         $data->timecreated = $this->apply_date_offset($data->timecreated);
-        $DB->insert_record('aiescape_messages', $data);
+        $newid = $DB->insert_record('aiescape_messages', $data);
+        $this->set_mapping('aiescape_message', $data->id, $newid);
+    }
+
+    /**
+     * Process a flag element.
+     *
+     * @param array $data
+     */
+    protected function process_aiescape_flag($data) {
+        global $DB;
+
+        $data            = (object) $data;
+        $data->attemptid = $this->get_new_parentid('aiescape_attempt');
+        $data->messageid = $this->get_mappingid('aiescape_message', $data->messageid);
+        $data->timecreated = $this->apply_date_offset($data->timecreated);
+        $DB->insert_record('aiescape_flags', $data);
     }
 
     /**

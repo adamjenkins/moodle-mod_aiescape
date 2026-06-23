@@ -41,24 +41,34 @@ class backup_aiescape_activity_structure_step extends backup_activity_structure_
             'premise', 'premiseformat',
             'goal', 'goalformat',
             'gamestyle', 'personaname',
-            'gamemode', 'steps', 'grade',
+            'gamemode', 'choicesgood', 'choicesneutral', 'choicesbad', 'steps', 'grade',
             'maxattempts', 'showprogress', 'allowstudentreview', 'partialscoreonquit',
+            'showpremise', 'showgoal', 'showchoicecounts', 'previewhoverhints', 'flagkeywords',
             'timecreated', 'timemodified',
         ]);
 
         // Configurable buttons (not user data).
         $buttons = new backup_nested_element('buttons');
-        $button  = new backup_nested_element('button', ['id'], ['label', 'prompt', 'sortorder', 'defaultindex']);
+        $button  = new backup_nested_element(
+            'button',
+            ['id'],
+            ['label', 'prompt', 'sortorder', 'defaultindex', 'usagelimit']
+        );
 
         // User attempt data.
         $attempts = new backup_nested_element('attempts');
         $attempt  = new backup_nested_element('attempt', ['id'], [
-            'userid', 'status', 'stepstally', 'timecreated', 'timemodified', 'timecompleted',
+            'userid', 'status', 'stepstally', 'timecreated', 'timemodified', 'timecompleted', 'ispreview',
         ]);
 
         $messages = new backup_nested_element('messages');
         $message  = new backup_nested_element('message', ['id'], [
             'role', 'message', 'choicetype', 'stepchange', 'timecreated',
+        ]);
+
+        $flags = new backup_nested_element('flags');
+        $flag  = new backup_nested_element('flag', ['id'], [
+            'messageid', 'keyword', 'timecreated',
         ]);
 
         // Build the tree.
@@ -69,6 +79,8 @@ class backup_aiescape_activity_structure_step extends backup_activity_structure_
         $attempts->add_child($attempt);
         $attempt->add_child($messages);
         $messages->add_child($message);
+        $attempt->add_child($flags);
+        $flags->add_child($flag);
 
         // Data sources.
         $aiescape->set_source_table('aiescape', ['id' => backup::VAR_ACTIVITYID]);
@@ -77,6 +89,7 @@ class backup_aiescape_activity_structure_step extends backup_activity_structure_
         if ($userinfo) {
             $attempt->set_source_table('aiescape_attempts', ['aiescape' => backup::VAR_PARENTID]);
             $message->set_source_table('aiescape_messages', ['attemptid' => backup::VAR_PARENTID]);
+            $flag->set_source_table('aiescape_flags', ['attemptid' => backup::VAR_PARENTID]);
             $attempt->annotate_ids('user', 'userid');
         }
 

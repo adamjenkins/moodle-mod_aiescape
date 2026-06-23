@@ -126,6 +126,8 @@ $string['aiinfo_noproviders'] = 'No AI providers are currently enabled. Configur
 $string['aiinfo_provider'] = 'Provider';
 $string['aiinfo_model'] = 'Model';
 $string['aiinfo_endpoint'] = 'Endpoint';
+$string['aiinfo_multipleproviders'] = 'Multiple AI providers enabled';
+$string['aiinfo_badge'] = 'AI';
 $string['showaiproviderinfo'] = 'Show AI configuration to teachers';
 $string['showaiproviderinfo_desc'] = 'If enabled, teachers will see the active AI provider name and model on the activity page.';
 $string['defaultbuttonssection'] = 'Default additional buttons';
@@ -202,6 +204,7 @@ $string['privacy:metadata:aiescape_messages:timecreated'] = 'The time the messag
 $string['privacy:metadata:aiescape_flags'] = 'Records of messages flagged for teacher review by keyword match.';
 $string['privacy:metadata:aiescape_flags:keyword'] = 'The keyword or phrase that matched.';
 $string['privacy:metadata:aiescape_flags:timecreated'] = 'The time the message was flagged.';
+$string['privacy:metadata:aiescape_externalai'] = 'Student messages, along with the activity premise, goal, and conversation history, are sent to the AI provider configured by the site administrator (Site administration → AI → AI providers) so it can generate a response.';
 
 // Events.
 $string['eventcoursemoduleviewed'] = 'AI Escape Room viewed';

@@ -2,7 +2,31 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
-## Unreleased
+## [1.0.1] - 2026-06-23
+
+### Fixed
+
+- **Backup/restore was silently dropping data.** `choicesgood`, `choicesneutral`, `choicesbad`, `showpremise`, `showgoal`, `showchoicecounts`, `previewhoverhints`, `flagkeywords`, the button `usagelimit`, and the attempt `ispreview` flag were missing from the backup structure, and the entire `aiescape_flags` table had no backup/restore element at all. Restoring or duplicating a course could throw a database error or silently revert these fields to their defaults. All fields and the flags table now round-trip correctly, and a new test suite guards against regressing this.
+- Replaced the legacy `aiescape_get_completion_state()` completion callback with a `\mod_aiescape\completion\custom_completion` class implementing the modern Hooks-era completion API (required for activities targeting Moodle 5.0+). The "Complete the scenario" rule now appears correctly wherever Moodle surfaces custom completion conditions.
+- The AI provider endpoint shown in **Site administration → Plugins → Activity modules → AI Escape Room** no longer displays embedded credentials (e.g. basic-auth tokens in a self-hosted endpoint URL) in plain text.
+- The activity page no longer presents one arbitrarily-chosen AI provider as "the" active provider when multiple providers are enabled site-wide; it now shows a generic notice instead of potentially misleading information.
+- The AMD module bundle (`amd/build/game.min.js`) was out of sync with its source after recent edits; rebuilt via `grunt amd`.
+
+### Added
+
+- A baseline PHPUnit suite (`tests/response_parser_test.php`, `attempt_manager_test.php`, `custom_completion_test.php`, `backup_restore_test.php`, plus a data generator) and a Behat feature (`tests/behat/view_activity.feature`) covering the previously untested core logic, completion behaviour, and backup/restore round-trip.
+- Privacy metadata now discloses that student messages and conversation history are sent to the configured `core_ai` provider for processing (third-party data sharing).
+- Client-side numeric validation on the good/neutral/bad choice count fields in the activity settings form.
+- A code comment documenting why activity completion is intentionally derived only from the numeric step tally, never from the AI's self-reported `completed` flag, to prevent a future prompt-injection regression.
+- CI: added PHP 8.4 to the test matrix, cached Composer dependencies between runs, and reduced the matrix for pull requests (latest Moodle branch only) while keeping the full cross-product on pushes.
+
+### Changed
+
+- CI: removed `continue-on-error` from the Grunt and Mustache Lint steps so they actually gate merges instead of running advisory-only.
+- `window.confirm()` replaced with `core/notification`'s confirm dialog for the quit-attempt prompt, and a busy-state guard added to prevent double-submission.
+- The hardcoded "AI" badge text on the module page now uses a language string.
+
+## [1.0.0] - 2026-06-18
 
 ### Added
 

@@ -61,6 +61,10 @@ class provider implements
             'timecreated' => 'privacy:metadata:aiescape_flags:timecreated',
         ], 'privacy:metadata:aiescape_flags');
 
+        $collection->add_external_location_link('aiprovider', [
+            'message' => 'privacy:metadata:aiescape_messages:message',
+        ], 'privacy:metadata:aiescape_externalai');
+
         return $collection;
     }
 

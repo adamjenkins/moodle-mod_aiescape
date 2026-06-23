@@ -414,12 +414,29 @@ function(Ajax, Notification, Templates, Str) {
      * Abandons the current attempt after user confirmation.
      */
     var quitAttempt = function() {
-        var btn = document.getElementById('aiescape-quit-btn');
-        var confirmMsg = (btn && btn.dataset.confirm) ? btn.dataset.confirm : 'Are you sure?';
-        if (!window.confirm(confirmMsg)) {
+        if (busy) {
             return;
         }
+        var btn = document.getElementById('aiescape-quit-btn');
+        var confirmMsgPromise = (btn && btn.dataset.confirm)
+            ? Promise.resolve(btn.dataset.confirm)
+            : getString('quitattempt_confirm', 'mod_aiescape');
 
+        confirmMsgPromise.then(function(confirmMsg) {
+            Notification.confirm(
+                '',
+                confirmMsg,
+                '',
+                '',
+                doQuitAttempt
+            );
+        }).catch(Notification.exception);
+    };
+
+    /**
+     * Performs the actual quit-attempt service call once the user has confirmed.
+     */
+    var doQuitAttempt = function() {
         setLoading(true);
         disableInput();
         hideQuitButton();

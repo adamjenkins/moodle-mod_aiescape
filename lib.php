@@ -41,6 +41,35 @@ function aiescape_supports($feature) {
 }
 
 /**
+ * Populates cached course-module info, including the custom completion rule.
+ *
+ * There is no per-activity teacher toggle for the "complete the scenario" rule
+ * (it always applies once automatic completion tracking is enabled), so it is
+ * unconditionally exposed here for \mod_aiescape\completion\custom_completion
+ * to evaluate.
+ *
+ * @param stdClass $coursemodule
+ * @return cached_cm_info|null
+ */
+function aiescape_get_coursemodule_info($coursemodule) {
+    global $DB;
+
+    $aiescape = $DB->get_record('aiescape', ['id' => $coursemodule->instance], 'id, name');
+    if (!$aiescape) {
+        return null;
+    }
+
+    $info = new cached_cm_info();
+    $info->name = $aiescape->name;
+
+    if ($coursemodule->completion == COMPLETION_TRACKING_AUTOMATIC) {
+        $info->customdata['customcompletionrules']['completioncompleted'] = 1;
+    }
+
+    return $info;
+}
+
+/**
  * Adds a new instance of the aiescape activity.
  *
  * @param stdClass $data Data from the settings form
@@ -353,26 +382,6 @@ function aiescape_reset_userdata($data) {
     }
 
     return $status;
-}
-
-/**
- * Returns the custom completion state for this activity.
- *
- * @param stdClass $course The course record
- * @param cm_info $cm The course-module record
- * @param int $userid The user to check
- * @param bool $type COMPLETION_AND or COMPLETION_OR
- * @return bool
- */
-function aiescape_get_completion_state($course, $cm, $userid, $type) {
-    global $DB;
-
-    $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance], '*', MUST_EXIST);
-    return $DB->record_exists('aiescape_attempts', [
-        'aiescape' => $aiescape->id,
-        'userid'   => $userid,
-        'status'   => 'completed',
-    ]);
 }
 
 /**
