@@ -11,6 +11,9 @@ All notable changes to `mod_aiescape` are documented in this file.
 - The AI provider endpoint shown in **Site administration → Plugins → Activity modules → AI Escape Room** no longer displays embedded credentials (e.g. basic-auth tokens in a self-hosted endpoint URL) in plain text.
 - The activity page no longer presents one arbitrarily-chosen AI provider as "the" active provider when multiple providers are enabled site-wide; it now shows a generic notice instead of potentially misleading information.
 - The AMD module bundle (`amd/build/game.min.js`) was out of sync with its source after recent edits; rebuilt via `grunt amd`.
+- Moodle Code Checker errors and warnings across the plugin: an invalid empty-string `DEFAULT` on the NOT NULL `personaname` column (made nullable instead, since it's only required for persona style), lang string keys not alphabetized, a missing `mod_aiescape` namespace and `MOODLE_INTERNAL` guard on `custom_completion_test.php`, an unneeded `MOODLE_INTERNAL` check in the test generator, and a literal backtick in a test fixture string.
+- Moodle PHPDoc Checker errors: incomplete `@param` lists on several `prompt_builder` methods and on `restore_aiescape_activity_task::define_decode_contents()`.
+- Mustache Lint failures: added missing "Example context" blocks to `view.mustache`, `message.mustache`, and `completion.mustache`.
 
 ### Added
 
