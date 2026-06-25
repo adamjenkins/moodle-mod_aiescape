@@ -119,7 +119,7 @@ class trigger_button extends external_api {
             'choices'   => new external_multiple_structure(
                 new external_single_structure([
                     'label' => new external_value(PARAM_TEXT, 'Choice label'),
-                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, or bad'),
+                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, bad, or freeturn'),
                 ])
             ),
             'remaining' => new external_value(PARAM_INT, 'Uses left this attempt; -1 means unlimited'),

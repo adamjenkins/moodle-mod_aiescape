@@ -277,4 +277,107 @@ final class attempt_manager_test extends advanced_testcase {
 
         $this->assertSame(0.0, $grade);
     }
+
+    #[\Override]
+    protected function tearDown(): void {
+        // Undo any \core_ai\manager DI override so it doesn't leak into other tests.
+        \core\di::reset_container();
+        parent::tearDown();
+    }
+
+    /**
+     * Builds a fake \core_ai\manager that returns the given generatedcontent strings
+     * in order on successive process_action() calls, and counts how many were made.
+     *
+     * @param string[] $responses Raw AI text to return, one per expected call
+     * @param int      $callcount Receives the number of process_action() calls made
+     * @return \core_ai\manager
+     */
+    private function fake_ai_manager(array $responses, int &$callcount): \core_ai\manager {
+        $callcount = 0;
+        return new class ($responses, $callcount) extends \core_ai\manager {
+            /** @var string[] */
+            private array $responses;
+            /** @var int */
+            private int $calls = 0;
+            /** @var int Running count of process_action() calls, by reference to the caller's variable */
+            private int $callcountref;
+
+            /**
+             * Constructor.
+             *
+             * @param string[] $responses
+             * @param int      $callcount Receives the running call count by reference
+             */
+            public function __construct(array $responses, int &$callcount) {
+                $this->responses = $responses;
+                $this->callcountref = &$callcount;
+            }
+
+            #[\Override]
+            public function process_action(\core_ai\aiactions\base $action): \core_ai\aiactions\responses\response_base {
+                $text = $this->responses[$this->calls] ?? end($this->responses);
+                $this->calls++;
+                $this->callcountref = $this->calls;
+                $response = new \core_ai\aiactions\responses\response_generate_text(success: true);
+                $response->set_response_data(['generatedcontent' => $text]);
+                return $response;
+            }
+        };
+    }
+
+    /**
+     * run_ai_turn() retries up to the configured limit when the AI keeps returning
+     * the wrong choice counts, then falls back to a single "free turn" choice
+     * instead of inventing placeholder choices.
+     */
+    public function test_run_ai_turn_falls_back_to_freeturn_after_exhausting_retries(): void {
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 2, 'mod_aiescape');
+        [$aiescape, , $cm, $user] = $this->setup_activity(['gamemode' => 'multichoice']);
+        $context = \context_module::instance($cm->id);
+
+        $badresponse = json_encode(['narrative' => 'Stuck.', 'completed' => false, 'stepchange' => 0, 'choices' => []]);
+        $callcount = 0;
+        \core\di::set(\core_ai\manager::class, $this->fake_ai_manager([$badresponse], $callcount));
+
+        $manager = new attempt_manager();
+        $result = $manager->run_ai_turn($aiescape, $context, $user->id, [], 0);
+
+        // Initial attempt + 2 retries = 3 calls.
+        $this->assertSame(3, $callcount);
+        $this->assertCount(1, $result['choices']);
+        $this->assertSame(attempt_manager::FREETURN_TYPE, $result['choices'][0]['type']);
+    }
+
+    /**
+     * run_ai_turn() stops retrying as soon as the AI returns valid choices, without
+     * exhausting the full retry budget.
+     */
+    public function test_run_ai_turn_stops_retrying_once_valid(): void {
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 2, 'mod_aiescape');
+        [$aiescape, , $cm, $user] = $this->setup_activity(['gamemode' => 'multichoice']);
+        $context = \context_module::instance($cm->id);
+
+        $badresponse = json_encode(['narrative' => 'Stuck.', 'completed' => false, 'stepchange' => 0, 'choices' => []]);
+        $goodresponse = json_encode([
+            'narrative' => 'You find a way.', 'completed' => false, 'stepchange' => 1,
+            'choices' => [
+                ['label' => 'Go', 'type' => 'good'],
+                ['label' => 'Wait', 'type' => 'neutral'],
+                ['label' => 'Flee', 'type' => 'bad'],
+            ],
+        ]);
+        $callcount = 0;
+        \core\di::set(\core_ai\manager::class, $this->fake_ai_manager([$badresponse, $goodresponse], $callcount));
+
+        $manager = new attempt_manager();
+        $result = $manager->run_ai_turn($aiescape, $context, $user->id, [], 0);
+
+        // Failed once, then succeeded on the first retry: 2 calls, no fallback.
+        $this->assertSame(2, $callcount);
+        $this->assertCount(3, $result['choices']);
+        $this->assertSame('You find a way.', $result['narrative']);
+    }
 }

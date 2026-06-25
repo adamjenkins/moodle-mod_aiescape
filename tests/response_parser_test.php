@@ -115,10 +115,11 @@ final class response_parser_test extends advanced_testcase {
     }
 
     /**
-     * When the AI returns fewer choices of a type than required, the whole choices
-     * array is discarded and a safe default set is substituted instead.
+     * When the AI returns fewer choices of a type than required, the choices array
+     * is discarded entirely (left for the caller to retry or fall back), not
+     * silently padded with invented placeholder choices.
      */
-    public function test_parse_falls_back_to_default_choices_when_counts_insufficient(): void {
+    public function test_parse_discards_choices_when_counts_insufficient(): void {
         $parser = new response_parser();
         $json = json_encode([
             'narrative' => 'x',
@@ -129,8 +130,8 @@ final class response_parser_test extends advanced_testcase {
 
         $result = $parser->parse($json, 'multichoice', 1, 1, 1);
 
-        $this->assertCount(3, $result['choices']);
-        $this->assertTrue($parser->choices_match_expected($result['choices'], 1, 1, 1));
+        $this->assertSame([], $result['choices']);
+        $this->assertFalse($parser->choices_match_expected($result['choices'], 1, 1, 1));
     }
 
     /**
@@ -167,37 +168,6 @@ final class response_parser_test extends advanced_testcase {
         $result = $parser->parse($json, 'freetext');
 
         $this->assertSame([], $result['choices']);
-    }
-
-    /**
-     * A correction response containing only a choices payload is parsed and validated.
-     */
-    public function test_parse_correction_response_validates_counts(): void {
-        $parser = new response_parser();
-        $json = json_encode([
-            'choices' => [
-                ['label' => 'Good', 'type' => 'good'],
-                ['label' => 'Neutral', 'type' => 'neutral'],
-                ['label' => 'Bad', 'type' => 'bad'],
-            ],
-        ]);
-
-        $result = $parser->parse_correction_response($json, 1, 1, 1);
-
-        $this->assertCount(3, $result);
-        $this->assertTrue($parser->choices_match_expected($result, 1, 1, 1));
-    }
-
-    /**
-     * An invalid correction response (still missing required types) yields an empty array.
-     */
-    public function test_parse_correction_response_returns_empty_when_still_invalid(): void {
-        $parser = new response_parser();
-        $json = json_encode(['choices' => [['label' => 'Only good', 'type' => 'good']]]);
-
-        $result = $parser->parse_correction_response($json, 1, 1, 1);
-
-        $this->assertSame([], $result);
     }
 
     /**

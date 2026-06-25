@@ -43,7 +43,7 @@ class send_message extends external_api {
             'message'    => new external_value(PARAM_TEXT, 'Student message text (freetext/combo modes)', VALUE_DEFAULT, ''),
             'choicetype' => new external_value(
                 PARAM_ALPHA,
-                'Choice type: good, neutral, bad (multichoice/combo)',
+                'Choice type: good, neutral, bad (multichoice/combo), or freeturn (fallback turn)',
                 VALUE_DEFAULT,
                 ''
             ),
@@ -101,6 +101,7 @@ class send_message extends external_api {
         $atman = new attempt_manager();
 
         // Determine the user-facing message text and step delta from choice.
+        $isfreeturn      = ($choicetype === attempt_manager::FREETURN_TYPE);
         $usermessagetext = $message;
         $presetchange    = null;
 
@@ -111,6 +112,10 @@ class send_message extends external_api {
                 'neutral' => 0,
                 'bad'     => -1,
             };
+        } else if ($isfreeturn) {
+            // The free-turn fallback always sends a fixed, server-controlled message;
+            // never trust the client for what gets sent to the AI here.
+            $usermessagetext = get_string('freeturnmessage', 'mod_aiescape');
         }
 
         // Record the student's message.
@@ -128,6 +133,11 @@ class send_message extends external_api {
 
         // Apply step change (prefer AI-evaluated for freetext; preset for choices).
         $stepchange = ($presetchange !== null) ? $presetchange : $result['stepchange'];
+        if ($isfreeturn) {
+            // The free turn is a fallback offered through no fault of the student's own;
+            // it must never cost them progress, even if the AI evaluates it negatively.
+            $stepchange = max(0, $stepchange);
+        }
         $atman->update_tally($attempt, $stepchange);
 
         // Record the AI response.
@@ -167,7 +177,7 @@ class send_message extends external_api {
             'choices'    => new external_multiple_structure(
                 new external_single_structure([
                     'label' => new external_value(PARAM_TEXT, 'Choice label'),
-                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, or bad'),
+                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, bad, or freeturn'),
                 ])
             ),
             'completed'  => new external_value(PARAM_BOOL, 'Whether the attempt is now completed'),

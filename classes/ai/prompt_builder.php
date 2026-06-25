@@ -84,24 +84,25 @@ class prompt_builder {
     }
 
     /**
-     * Builds a correction prompt when the AI returned the wrong number of choices.
+     * Appends a stern reminder of the required JSON schema and choice counts to an
+     * already-built prompt, for use when the AI's previous attempt at this same
+     * turn failed to return the required choices.
      *
-     * @param stdClass $aiescape      The activity record
-     * @param string   $narrative     The narrative from the previous AI response
-     * @param array    $actualchoices The choices the AI actually returned
+     * Re-sends the full original prompt (so the AI gets a genuine fresh attempt at
+     * the whole turn, not just a patch to its choices) with an added reminder of
+     * exactly what was wrong and what is required, to maximise the chance the
+     * retry succeeds.
+     *
+     * @param string   $originalprompt The full prompt built by build()
+     * @param stdClass $aiescape       The activity record
+     * @param array    $actualchoices  The choices the AI actually returned (may be empty)
      * @return string
      */
-    public function build_correction_prompt(
+    public function build_retry_prompt(
+        string $originalprompt,
         \stdClass $aiescape,
-        string $narrative,
         array $actualchoices
     ): string {
-        $ispersona = $this->is_persona($aiescape);
-        $name      = $ispersona ? $this->persona_name($aiescape) : '';
-        $choicehint = $ispersona
-            ? "what the student says to $name"
-            : 'choice text describing an action or decision';
-
         $good    = max(0, (int) ($aiescape->choicesgood ?? 1));
         $neutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
         $bad     = max(0, (int) ($aiescape->choicesbad ?? 1));
@@ -115,18 +116,10 @@ class prompt_builder {
         }
 
         $lines = [];
-        if ($ispersona && $name !== '') {
-            $lines[] = "You are $name, continuing an interactive educational activity.";
-        } else {
-            $lines[] = 'You are running an interactive AI Escape Room activity.';
-        }
-        $lines[] = '';
-        $lines[] = 'Your last narrative response was:';
-        $lines[] = $narrative;
-        $lines[] = '';
-        $lines[] = 'The choices you provided did not match the required counts.';
+        $lines[] = '--- REMINDER: YOUR PREVIOUS RESPONSE WAS REJECTED ---';
         $lines[] = sprintf(
-            'Required: %d good, %d neutral, %d bad. You provided: %d good, %d neutral, %d bad.',
+            'It did not contain valid JSON with exactly %d good, %d neutral and %d bad choices'
+                . ' (it had %d good, %d neutral, %d bad).',
             $good,
             $neutral,
             $bad,
@@ -134,22 +127,10 @@ class prompt_builder {
             $counts['neutral'],
             $counts['bad']
         );
-        $lines[] = '';
-        $lines[] = 'Please provide ONLY the corrected choices as a JSON object.';
-        $lines[] = 'The choices must fit naturally with the narrative above.';
-        $lines[] = 'Respond with ONLY valid JSON — no markdown, no extra text:';
-        $lines[] = '{';
-        $lines[] = '  "choices": [';
+        $lines[] = 'Try again. Respond with ONLY a single valid JSON object matching the schema above'
+            . ' — no markdown, no code fences, no extra text before or after it.';
 
-        $schemalines = $this->build_choices_schema($choicehint, $good, $neutral, $bad);
-        foreach ($schemalines as $idx => $sl) {
-            $lines[] = $sl . ($idx < count($schemalines) - 1 ? ',' : '');
-        }
-
-        $lines[] = '  ]';
-        $lines[] = '}';
-
-        return implode("\n", $lines);
+        return $originalprompt . "\n\n" . implode("\n", $lines);
     }
 
     // Private helpers.

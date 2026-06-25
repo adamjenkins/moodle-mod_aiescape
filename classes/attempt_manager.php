@@ -25,6 +25,13 @@ namespace mod_aiescape;
  */
 class attempt_manager {
     /**
+     * Choice type used for the single fallback "free turn" button offered when the
+     * AI repeatedly fails to return correctly-formatted choices. Selecting it sends
+     * a fixed, server-controlled message to the AI rather than a real choice.
+     */
+    const FREETURN_TYPE = 'freeturn';
+
+    /**
      * Returns the current in-progress attempt for a user, or null if none exists.
      *
      * @param int $aiescape Activity instance id
@@ -193,8 +200,14 @@ class attempt_manager {
 
     /**
      * Runs a single AI turn: builds the prompt from the conversation history, calls
-     * the AI, parses the response, and retries with a correction prompt if the
-     * multichoice/combo choice counts returned don't match what was configured.
+     * the AI, and parses the response. If multichoice/combo choices don't match
+     * what was configured, re-asks the AI for a complete, correctly-formatted turn
+     * up to the 'choiceretrylimit' admin setting's number of times.
+     *
+     * If every retry still fails, the student is offered a single "free turn"
+     * choice instead of invented placeholder choices (see FREETURN_TYPE). Selecting
+     * it sends a fixed message and, per send_message::execute(), can never reduce
+     * the student's tally — so a run of AI misbehaviour never costs them progress.
      *
      * Used by both normal turns (send_message) and additional-button turns
      * (trigger_button) so both go through identical prompt-building and
@@ -216,52 +229,53 @@ class attempt_manager {
     ): array {
         $builder = new \mod_aiescape\ai\prompt_builder();
         $parser  = new \mod_aiescape\ai\response_parser();
-
-        $prompt = $builder->build($aiescape, $messages, $tally);
-
-        $aiaction = new \core_ai\aiactions\generate_text(
-            contextid: $context->id,
-            userid: $userid,
-            prompttext: $prompt
-        );
-        $aimanager  = \core\di::get(\core_ai\manager::class);
-        $airesponse = $aimanager->process_action($aiaction);
-
-        if (!$airesponse->get_success()) {
-            throw new \moodle_exception('error:aifailed', 'mod_aiescape');
-        }
+        $aimanager = \core\di::get(\core_ai\manager::class);
 
         $choicesgood    = max(1, (int) ($aiescape->choicesgood ?? 1));
         $choicesneutral = max(0, (int) ($aiescape->choicesneutral ?? 1));
         $choicesbad     = max(0, (int) ($aiescape->choicesbad ?? 1));
+        $needschoices   = ($aiescape->gamemode === 'multichoice' || $aiescape->gamemode === 'combo');
 
-        $rawtext = $airesponse->get_response_data()['generatedcontent'] ?? '';
-        $parsed  = $parser->parse($rawtext, $aiescape->gamemode, $choicesgood, $choicesneutral, $choicesbad);
+        $prompt  = $builder->build($aiescape, $messages, $tally);
+        $parsed  = null;
+        $retrylimit = max(0, (int) get_config('mod_aiescape', 'choiceretrylimit'));
 
-        // If multichoice/combo choices don't match expected counts, ask the AI to correct them.
-        if (
-            ($aiescape->gamemode === 'multichoice' || $aiescape->gamemode === 'combo') &&
-            !$parser->choices_match_expected($parsed['choices'], $choicesgood, $choicesneutral, $choicesbad)
-        ) {
-            $correctionprompt = $builder->build_correction_prompt($aiescape, $parsed['narrative'], $parsed['choices']);
-            $correctionaction = new \core_ai\aiactions\generate_text(
+        for ($attempt = 0; $attempt <= $retrylimit; $attempt++) {
+            $sendprompt = ($attempt === 0)
+                ? $prompt
+                : $builder->build_retry_prompt($prompt, $aiescape, $parsed['choices']);
+
+            $aiaction = new \core_ai\aiactions\generate_text(
                 contextid: $context->id,
                 userid: $userid,
-                prompttext: $correctionprompt
+                prompttext: $sendprompt
             );
-            $correctionresponse = $aimanager->process_action($correctionaction);
-            if ($correctionresponse->get_success()) {
-                $correctiontext   = $correctionresponse->get_response_data()['generatedcontent'] ?? '';
-                $correctedchoices = $parser->parse_correction_response(
-                    $correctiontext,
-                    $choicesgood,
-                    $choicesneutral,
-                    $choicesbad
-                );
-                if (!empty($correctedchoices)) {
-                    $parsed['choices'] = $correctedchoices;
+            $airesponse = $aimanager->process_action($aiaction);
+
+            if (!$airesponse->get_success()) {
+                if ($parsed !== null) {
+                    // Keep the previous attempt's narrative rather than failing the whole turn.
+                    break;
                 }
+                throw new \moodle_exception('error:aifailed', 'mod_aiescape');
             }
+
+            $rawtext = $airesponse->get_response_data()['generatedcontent'] ?? '';
+            $parsed  = $parser->parse($rawtext, $aiescape->gamemode, $choicesgood, $choicesneutral, $choicesbad);
+
+            $valid = !$needschoices
+                || $parser->choices_match_expected($parsed['choices'], $choicesgood, $choicesneutral, $choicesbad);
+            if ($valid) {
+                break;
+            }
+        }
+
+        if ($needschoices && !$parser->choices_match_expected($parsed['choices'], $choicesgood, $choicesneutral, $choicesbad)) {
+            // Exhausted all retries: offer a single fallback turn instead of invented choices.
+            $parsed['choices'] = [[
+                'label' => get_string('freeturnlabel', 'mod_aiescape'),
+                'type'  => self::FREETURN_TYPE,
+            ]];
         }
 
         return [

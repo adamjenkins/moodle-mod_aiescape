@@ -251,8 +251,8 @@ function(Ajax, Notification, Templates, Str) {
         shuffled.forEach(function(choice) {
             var btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'btn btn-primary';
-            if (choiceHints) {
+            btn.className = (choice.type === 'freeturn') ? 'btn btn-outline-primary' : 'btn btn-primary';
+            if (choiceHints && choice.type !== 'freeturn') {
                 btn.classList.add('aiescape-choice-hint-' + choice.type);
                 getString('choicehint_' + choice.type, 'mod_aiescape').then(function(label) {
                     btn.title = label;

@@ -42,6 +42,14 @@ if ($ADMIN->fulltree) {
         0
     ));
 
+    $settings->add(new admin_setting_configselect(
+        'mod_aiescape/choiceretrylimit',
+        get_string('choiceretrylimit', 'mod_aiescape'),
+        get_string('choiceretrylimit_desc', 'mod_aiescape'),
+        2,
+        [0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5]
+    ));
+
     // Default additional buttons.
 
     $settings->add(new admin_setting_heading(
