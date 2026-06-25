@@ -36,7 +36,7 @@ In multiple choice and combo modes, teachers control exactly how many of each ty
 - **Neutral choices** (0–5) — do not change the step tally
 - **Bad choices** (0–5) — each subtracts one step
 
-The AI prompt is constructed to request the exact specified counts. If the AI returns the wrong number, a single correction prompt is sent automatically before falling back to defaults.
+The AI prompt is constructed to request the exact specified counts. If the AI returns the wrong number (or malformed output), Moodle automatically re-asks it for a complete, correctly-formatted turn, up to the **Choice format retry limit** admin setting's number of times. If every retry still fails, students are offered a single safe "Free turn: Roll the dice..." option instead of invented placeholder choices — selecting it simply continues the story and can never cost the student progress, even if the AI evaluates it negatively.
 
 ### Additional buttons
 
@@ -107,6 +107,7 @@ Found at Site administration → Plugins → Activity modules → AI Escape Room
 
 - **AI provider info** — read-only table showing the active provider name, type, model, and endpoint
 - **Show AI provider info to teachers** — surface the provider badge on the activity page for users with the `viewreports` capability
+- **Choice format retry limit** — how many times to re-ask the AI for a correctly-formatted turn before falling back to a single safe "Free turn: Roll the dice..." option (0–5, default 2)
 - **Default buttons (slots 1–5)** — pre-define up to five buttons (label, prompt, and default usage limit) that teachers can enable per activity
 
 ## Privacy
