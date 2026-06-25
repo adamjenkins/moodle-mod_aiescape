@@ -1,0 +1,10 @@
+{
+    "name": "adamjenkins/moodle-mod_aiescape",
+    "description": "A Moodle activity module that creates an AI-driven interactive escape room experience using Moodle's core_ai subsystem",
+    "type": "moodle-mod",
+    "require": {
+        "moodle/moodle": "^5.0",
+        "moodle/composer-installer": "*"
+    },
+    "license": "GPL-3.0-or-later"
+}
