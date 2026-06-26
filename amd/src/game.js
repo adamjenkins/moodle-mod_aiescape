@@ -422,15 +422,16 @@ function(Ajax, Notification, Templates, Str) {
             ? Promise.resolve(btn.dataset.confirm)
             : getString('quitattempt_confirm', 'mod_aiescape');
 
-        confirmMsgPromise.then(function(confirmMsg) {
-            Notification.confirm(
-                '',
-                confirmMsg,
-                '',
-                '',
-                doQuitAttempt
-            );
-        }).catch(Notification.exception);
+        Promise.all([confirmMsgPromise, getString('quitattempt', 'mod_aiescape')])
+            .then(function(results) {
+                Notification.confirm(
+                    '',
+                    results[0],
+                    results[1],
+                    '',
+                    doQuitAttempt
+                );
+            }).catch(Notification.exception);
     };
 
     /**

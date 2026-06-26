@@ -11,6 +11,8 @@ All notable changes to `mod_aiescape` are documented in this file.
 - **Grade item `idnumber` was not synchronised with the course-module `cmidnumber`.** `aiescape_grade_item_update()` was not passing the `cmidnumber` to `grade_update()`, so setting an ID number on the course module (used for outcome mapping and grade import by column) had no effect on the associated grade item. The function now follows the pattern used by the quiz module.
 - **Course reset used nested SQL subqueries for deletions in `aiescape_reset_userdata()`.** Replaced with `get_fieldset_select()` + `get_in_or_equal()` to match Moodle's preferred data-manipulation API.
 - **Lang string key `choiceretrylimit` was out of alphabetical order** in `lang/en/aiescape.php`. Moved to the correct position between `choicehint_neutral` and `choicesbad`.
+- **The "Quit attempt" confirmation modal had an empty confirm button.** `Notification.confirm()` was called with an empty string for the confirm-button label, leaving the button blank. The button now shows the `quitattempt` lang string ("Quit attempt").
+- **Activity page threw a 500 error when grade-based pass-grade completion was enabled.** `custom_completion::get_sort_order()` was missing `completionpassgrade`, causing Moodle's `cm_completion_details` to throw a coding exception whenever it tried to sort the completion conditions for display.
 
 ## [1.0.3] - 2026-06-25
 
