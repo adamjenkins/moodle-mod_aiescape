@@ -63,9 +63,10 @@ Teachers can configure a list of keywords or phrases (one per line, case-insensi
 
 ### Grading
 
-- Standard Moodle gradebook integration
-- Completed attempts receive full grade
-- Abandoned attempts can receive partial grade (configurable per activity)
+- Standard Moodle gradebook integration via `core_grades`
+- Completed attempts receive full grade; abandoned attempts can receive partial grade (configurable per activity)
+- Grade-based and passing-grade completion tracking work correctly (`completionusegrade`, `completionpassgrade`)
+- Grade item `idnumber` is synchronised with the course module's ID number (`cmidnumber`), enabling grade-import by column and outcome mapping
 
 ### Fullscreen mode
 

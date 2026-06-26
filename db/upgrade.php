@@ -206,5 +206,15 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026061010, 'aiescape');
     }
 
+    if ($oldversion < 2026062600) {
+        // Increase choicetype from VARCHAR(20) to VARCHAR(255) so that button
+        // labels longer than 20 characters can be stored without truncation.
+        $table = new xmldb_table('aiescape_messages');
+        $field = new xmldb_field('choicetype', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'message');
+        $dbman->change_field_precision($table, $field);
+
+        upgrade_mod_savepoint(true, 2026062600, 'aiescape');
+    }
+
     return true;
 }

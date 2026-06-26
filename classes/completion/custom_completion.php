@@ -39,9 +39,10 @@ class custom_completion extends activity_custom_completion {
 
         $aiescape = $DB->get_record('aiescape', ['id' => $this->cm->instance], '*', MUST_EXIST);
         $status = $DB->record_exists('aiescape_attempts', [
-            'aiescape' => $aiescape->id,
-            'userid'   => $this->userid,
-            'status'   => 'completed',
+            'aiescape'  => $aiescape->id,
+            'userid'    => $this->userid,
+            'status'    => 'completed',
+            'ispreview' => 0,
         ]);
 
         return $status ? COMPLETION_COMPLETE : COMPLETION_INCOMPLETE;

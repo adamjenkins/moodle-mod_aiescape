@@ -66,7 +66,7 @@
         <FIELD NAME="attemptid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Foreign key to aiescape_attempts"/>
         <FIELD NAME="role" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="user or assistant"/>
         <FIELD NAME="message" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Message content"/>
-        <FIELD NAME="choicetype" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="good, neutral, bad, or button label for user messages"/>
+        <FIELD NAME="choicetype" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="good, neutral, bad, or button label for user messages"/>
         <FIELD NAME="stepchange" TYPE="int" LENGTH="4" NOTNULL="false" SEQUENCE="false" COMMENT="Step delta applied by this message: +1, 0, or -1"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
       </FIELDS>

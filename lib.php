@@ -232,12 +232,15 @@ function aiescape_grade_item_update($aiescape, $grades = null) {
     global $CFG;
     require_once($CFG->libdir . '/gradelib.php');
 
-    $item = [
-        'itemname' => clean_param($aiescape->name, PARAM_NOTAGS),
-        'gradetype' => GRADE_TYPE_VALUE,
-        'grademax'  => $aiescape->grade ?? 100,
-        'grademin'  => 0,
-    ];
+    if (property_exists($aiescape, 'cmidnumber')) {
+        $item = ['itemname' => clean_param($aiescape->name, PARAM_NOTAGS), 'idnumber' => $aiescape->cmidnumber];
+    } else {
+        $item = ['itemname' => clean_param($aiescape->name, PARAM_NOTAGS)];
+    }
+
+    $item['gradetype'] = GRADE_TYPE_VALUE;
+    $item['grademax']  = $aiescape->grade ?? 100;
+    $item['grademin']  = 0;
 
     if (isset($aiescape->grade) && $aiescape->grade == 0) {
         $item['gradetype'] = GRADE_TYPE_NONE;
@@ -365,14 +368,17 @@ function aiescape_reset_userdata($data) {
     $status = [];
 
     if (!empty($data->reset_aiescape_attempts)) {
-        $sql = 'aiescape IN (SELECT id FROM {aiescape} WHERE course = ?)';
-        $DB->delete_records_select('aiescape_flags', "attemptid IN (
-            SELECT id FROM {aiescape_attempts} WHERE $sql
-        )", [$data->courseid]);
-        $DB->delete_records_select('aiescape_messages', "attemptid IN (
-            SELECT id FROM {aiescape_attempts} WHERE $sql
-        )", [$data->courseid]);
-        $DB->delete_records_select('aiescape_attempts', $sql, [$data->courseid]);
+        $aiescapeids = $DB->get_fieldset_select('aiescape', 'id', 'course = ?', [$data->courseid]);
+        if ($aiescapeids) {
+            [$insql, $params] = $DB->get_in_or_equal($aiescapeids);
+            $attemptids = $DB->get_fieldset_select('aiescape_attempts', 'id', "aiescape $insql", $params);
+            if ($attemptids) {
+                [$aisql, $aiparams] = $DB->get_in_or_equal($attemptids);
+                $DB->delete_records_select('aiescape_flags', "attemptid $aisql", $aiparams);
+                $DB->delete_records_select('aiescape_messages', "attemptid $aisql", $aiparams);
+            }
+            $DB->delete_records_select('aiescape_attempts', "aiescape $insql", $params);
+        }
 
         $status[] = [
             'component' => get_string('modulenameplural', 'mod_aiescape'),
