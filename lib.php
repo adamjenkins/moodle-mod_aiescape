@@ -405,8 +405,16 @@ function aiescape_reset_userdata($data) {
 
             // Reset gradebook entries for all activities in the course.
             foreach ($aiescapes as $aiescape) {
-                grade_update('mod/aiescape', $aiescape->course, 'mod', 'aiescape',
-                    $aiescape->id, 0, null, ['reset' => 1]);
+                grade_update(
+                    'mod/aiescape',
+                    $aiescape->course,
+                    'mod',
+                    'aiescape',
+                    $aiescape->id,
+                    0,
+                    null,
+                    ['reset' => 1]
+                );
             }
         }
 
