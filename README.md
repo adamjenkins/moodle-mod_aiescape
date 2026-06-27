@@ -2,6 +2,10 @@
 
 A Moodle activity plugin that creates an AI-driven interactive escape room experience. Students work through a scenario by making choices or typing free-text responses, guided by a large language model via Moodle's `core_ai` subsystem.
 
+## Security
+
+Choice submissions are validated server-side. The server records the exact set of choices the AI offered each turn and rejects any submission that does not match — preventing grade forgery via direct web-service calls and ensuring keyword-flagging cannot be bypassed by routing free text through the choice label field.
+
 ## Requirements
 
 - Moodle 5.0 or later (requires `core_ai`)
@@ -60,6 +64,7 @@ Teachers can configure a list of keywords or phrases (one per line, case-insensi
 - **Quit attempt** button lets students abandon a run early
 - Optional partial scoring on quit (awards grade proportional to steps completed)
 - Student review of completed attempts (configurable per activity)
+- **Course reset** — the standard Moodle course-reset flow includes an "AI Escape Rooms" section with a "Delete all AI Escape Room attempts" checkbox (ticked by default), which removes all attempt data and resets gradebook entries for the activities in the course
 
 ### Grading
 

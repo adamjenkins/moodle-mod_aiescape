@@ -100,6 +100,27 @@ class send_message extends external_api {
 
         $atman = new attempt_manager();
 
+        // Reject preset-choice submissions in freetext mode (no choice buttons there).
+        if ($aiescape->gamemode === 'freetext' && $choicetype !== '') {
+            throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
+        }
+
+        // Validate the submitted choice against the server-stored offered choices so
+        // that a student cannot forge a choicetype the AI never offered this turn.
+        if ($choicetype !== '') {
+            $offeredchoices = $atman->get_offered_choices($attempt->id);
+            $matched = false;
+            foreach ($offeredchoices as $c) {
+                if ($c['type'] === $choicetype && $c['label'] === $choicelabel) {
+                    $matched = true;
+                    break;
+                }
+            }
+            if (!$matched) {
+                throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
+            }
+        }
+
         // Determine the user-facing message text and step delta from choice.
         $isfreeturn      = ($choicetype === attempt_manager::FREETURN_TYPE);
         $usermessagetext = $message;
@@ -154,6 +175,11 @@ class send_message extends external_api {
             $atman->complete_attempt($attempt, $aiescape, $course, $cminfo);
             $completed = true;
         }
+
+        // Persist the choices the AI offered this turn so the next send_message call can
+        // validate the client's submission against what the server actually offered.
+        // Clear on completion — the attempt is closed, so no next turn exists.
+        $atman->store_offered_choices($attemptid, $completed ? [] : $result['choices']);
 
         return [
             'narrative'  => $result['narrative'],

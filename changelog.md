@@ -2,6 +2,19 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
+## [1.0.5] - 2026-06-27
+
+### Security
+
+- **Choice submissions are now validated server-side against what the AI actually offered.** Previously, `send_message` derived the per-turn step change (+1 / 0 / −1) directly from the client-supplied `choicetype` parameter without verifying that the AI had returned a choice of that type, and without restricting this logic to the choice-based game modes. An enrolled student could therefore call the web service directly with `choicetype=good` on every turn to force their step tally to the required total, which auto-completed the attempt, wrote the full grade to the gradebook, and triggered Moodle activity completion — in any mode, including free text where scoring is supposed to be AI-evaluated. The same client-trust gap let a student route arbitrary text through the `choicelabel` field with a non-empty `choicetype` to bypass the teacher keyword-flagging and safeguarding check.
+
+  The server now persists the exact set of choices the AI offered on each turn as JSON in a new `lastchoicejson` column on `aiescape_attempts`. On the next `send_message` call, the submitted `{type, label}` pair is looked up against that stored set; a mismatch throws `error:invalidchoice`. Any `choicetype` submission is also rejected outright in free-text mode. A database upgrade step adds the column to existing installations.
+
+### Fixed
+
+- **`view.php` and `ai_info_setting.php` queried the core `ai_providers` table directly** with `$DB->get_records('ai_providers', ...)` instead of using the public `core_ai\manager::get_provider_records()` API. Both call sites now obtain the manager via `\core\di::get(\core_ai\manager::class)` and call `get_provider_records()`, consistent with the rest of the plugin and insulated from internal `core_ai` schema changes.
+- **Course reset option never appeared in the course reset UI.** `aiescape_reset_userdata()` existed but the required companion callbacks `aiescape_reset_course_form_definition()` and `aiescape_reset_course_form_defaults()` were missing, so the "Delete all AI Escape Room attempts" checkbox was never registered on the reset form and the deletion branch was unreachable through the standard UI. Both callbacks have been added. Additionally, `aiescape_reset_userdata()` now resets the gradebook entries for each activity in the course after deleting attempt data, so stale grades no longer persist after a course reset.
+
 ## [1.0.4] - 2026-06-26
 
 ### Fixed

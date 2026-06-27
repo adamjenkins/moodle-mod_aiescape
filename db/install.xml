@@ -50,6 +50,7 @@
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp when attempt was completed"/>
         <FIELD NAME="ispreview" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether this attempt was made by a teacher/manager previewing the activity"/>
+        <FIELD NAME="lastchoicejson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of choices offered to the student on the last AI turn; validated server-side on next submission"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

@@ -101,6 +101,9 @@ class trigger_button extends external_api {
 
         $choices = in_array($aiescape->gamemode, ['multichoice', 'combo'], true) ? $result['choices'] : [];
 
+        // Persist the choices the AI offered so the next send_message can validate against them.
+        $atman->store_offered_choices($attemptid, $choices);
+
         return [
             'narrative' => $result['narrative'],
             'choices'   => $choices,

@@ -6,5 +6,9 @@
         "moodle/moodle": "^5.0",
         "moodle/composer-installer": "*"
     },
-    "license": "GPL-3.0-or-later"
+    "license": "GPL-3.0-or-later",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "*",
+        "moodlehq/moodle-cs": "*"
+    }
 }

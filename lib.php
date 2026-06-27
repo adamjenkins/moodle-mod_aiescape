@@ -357,18 +357,42 @@ function aiescape_get_user_grades($aiescape, $userid = 0) {
 }
 
 /**
+ * Adds the AI Escape Room reset option to the course-reset form.
+ *
+ * @param MoodleQuickForm $mform The course reset form
+ */
+function aiescape_reset_course_form_definition($mform) {
+    $mform->addElement('header', 'aiescapeheader', get_string('modulenameplural', 'mod_aiescape'));
+    $mform->addElement('advcheckbox', 'reset_aiescape_attempts', get_string('resetattempts', 'mod_aiescape'));
+}
+
+/**
+ * Returns default values for the course-reset form fields.
+ *
+ * @param stdClass $course The course object (unused)
+ * @return array
+ */
+function aiescape_reset_course_form_defaults($course) {
+    return ['reset_aiescape_attempts' => 1];
+}
+
+/**
  * Resets user data for course reset.
  *
  * @param stdClass $data Course reset form data
  * @return array Status items
  */
 function aiescape_reset_userdata($data) {
-    global $DB;
+    global $CFG, $DB;
 
     $status = [];
 
     if (!empty($data->reset_aiescape_attempts)) {
-        $aiescapeids = $DB->get_fieldset_select('aiescape', 'id', 'course = ?', [$data->courseid]);
+        require_once($CFG->libdir . '/gradelib.php');
+
+        $aiescapes = $DB->get_records('aiescape', ['course' => $data->courseid], '', 'id, course');
+        $aiescapeids = array_keys($aiescapes);
+
         if ($aiescapeids) {
             [$insql, $params] = $DB->get_in_or_equal($aiescapeids);
             $attemptids = $DB->get_fieldset_select('aiescape_attempts', 'id', "aiescape $insql", $params);
@@ -378,6 +402,12 @@ function aiescape_reset_userdata($data) {
                 $DB->delete_records_select('aiescape_messages', "attemptid $aisql", $aiparams);
             }
             $DB->delete_records_select('aiescape_attempts', "aiescape $insql", $params);
+
+            // Reset gradebook entries for all activities in the course.
+            foreach ($aiescapes as $aiescape) {
+                grade_update('mod/aiescape', $aiescape->course, 'mod', 'aiescape',
+                    $aiescape->id, 0, null, ['reset' => 1]);
+            }
         }
 
         $status[] = [

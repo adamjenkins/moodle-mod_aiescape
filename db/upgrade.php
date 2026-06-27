@@ -216,5 +216,18 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026062600, 'aiescape');
     }
 
+    if ($oldversion < 2026062700) {
+        // Store the last set of choices offered by the AI so that the server can
+        // validate the client's submitted choicetype/choicelabel on the next turn,
+        // preventing grade forgery and moderation bypass via forged choicetype.
+        $table = new xmldb_table('aiescape_attempts');
+        $field = new xmldb_field('lastchoicejson', XMLDB_TYPE_TEXT, null, null, null, null, null, 'ispreview');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026062700, 'aiescape');
+    }
+
     return true;
 }

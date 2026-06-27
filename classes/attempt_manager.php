@@ -341,6 +341,37 @@ class attempt_manager {
     }
 
     /**
+     * Persists the set of choices offered to the student on the last AI turn.
+     *
+     * Stored as a JSON array of {label, type} objects so that the next
+     * send_message call can validate the client's submitted choice against
+     * what the server actually offered.
+     *
+     * @param int   $attemptid
+     * @param array $choices   Array of ['label' => string, 'type' => string]
+     * @return void
+     */
+    public function store_offered_choices(int $attemptid, array $choices): void {
+        global $DB;
+        $DB->set_field('aiescape_attempts', 'lastchoicejson', json_encode($choices), ['id' => $attemptid]);
+    }
+
+    /**
+     * Returns the choices that were offered to the student on the last AI turn.
+     *
+     * @param int $attemptid
+     * @return array Array of ['label' => string, 'type' => string], empty if none stored
+     */
+    public function get_offered_choices(int $attemptid): array {
+        global $DB;
+        $json = $DB->get_field('aiescape_attempts', 'lastchoicejson', ['id' => $attemptid]);
+        if (!$json) {
+            return [];
+        }
+        return json_decode($json, true) ?? [];
+    }
+
+    /**
      * Marks an attempt as abandoned and optionally awards a partial grade.
      *
      * @param stdClass $attempt  The attempt record (must be in 'inprogress' status)

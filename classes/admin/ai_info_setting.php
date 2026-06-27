@@ -59,9 +59,10 @@ class ai_info_setting extends \admin_setting {
      * @return string HTML
      */
     public function output_html($data, $query = '') {
-        global $DB, $OUTPUT;
+        global $OUTPUT;
 
-        $providers = $DB->get_records('ai_providers', ['enabled' => 1], 'id ASC');
+        $aimanager = \core\di::get(\core_ai\manager::class);
+        $providers = $aimanager->get_provider_records(['enabled' => 1]);
 
         if (empty($providers)) {
             $html = $OUTPUT->notification(

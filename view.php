@@ -169,7 +169,8 @@ $aiproviderlabel = '';
 $showaiinfo = get_config('mod_aiescape', 'showaiproviderinfo')
     && has_capability('mod/aiescape:viewreports', $context);
 if ($showaiinfo) {
-    $providers = $DB->get_records('ai_providers', ['enabled' => 1], 'id ASC');
+    $aimanager = \core\di::get(\core_ai\manager::class);
+    $providers = $aimanager->get_provider_records(['enabled' => 1]);
     if (count($providers) === 1) {
         $provider = reset($providers);
         $actionconfig = json_decode($provider->actionconfig ?? '', true) ?? [];
