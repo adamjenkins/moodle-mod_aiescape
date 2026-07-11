@@ -21,6 +21,8 @@
     * aiproviderlabel - string (optional AI info for teachers)
     * quitlabel - string
     * quitconfirm - string
+    * hasimages - boolean
+    * firstimage - string (URL of the first progress image, empty if none)
 
     Example context (json):
     {
@@ -40,7 +42,9 @@
         "startlabel": "Start Game",
         "aiproviderlabel": "",
         "quitlabel": "Quit",
-        "quitconfirm": "Are you sure you want to quit?"
+        "quitconfirm": "Are you sure you want to quit?",
+        "hasimages": true,
+        "firstimage": "https://example.com/pluginfile.php/1/mod_aiescape/progressimage/0/stage1.png"
     }
 }}
 {{#aiproviderlabel}}
@@ -104,11 +108,24 @@
     </div>
     {{/showprogress}}
 
-    <div id="aiescape-chatlog"
-         class="aiescape-chatlog border rounded p-3 mb-3"
-         style="min-height: 300px; max-height: 500px; overflow-y: auto;"
-         aria-live="polite"
-         aria-label="{{# str }} attempts, mod_aiescape {{/ str }}">
+    <div class="aiescape-main d-flex flex-column flex-md-row gap-3 mb-3">
+        {{#hasimages}}
+        <div class="aiescape-image-panel">
+            <img id="aiescape-progress-image"
+                 src="{{firstimage}}"
+                 class="img-fluid rounded"
+                 alt="">
+        </div>
+        {{/hasimages}}
+
+        <div class="aiescape-chat-panel flex-grow-1">
+            <div id="aiescape-chatlog"
+                 class="aiescape-chatlog border rounded p-3"
+                 style="min-height: 300px; max-height: 500px; overflow-y: auto;"
+                 aria-live="polite"
+                 aria-label="{{# str }} attempts, mod_aiescape {{/ str }}">
+            </div>
+        </div>
     </div>
 
     <div id="aiescape-loading" class="text-center py-2 d-none" aria-live="assertive">

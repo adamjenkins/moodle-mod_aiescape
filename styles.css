@@ -10,6 +10,29 @@
     position: relative;
 }
 
+/* Progress image panel sits beside the chat log on wide screens. */
+.aiescape-image-panel {
+    flex: 0 0 auto;
+    max-width: 40%;
+    align-self: flex-start;
+}
+
+.aiescape-image-panel img {
+    max-height: 500px;
+    object-fit: contain;
+}
+
+@media (max-width: 767.98px) {
+    .aiescape-image-panel {
+        max-width: 100%;
+        align-self: center;
+    }
+
+    .aiescape-image-panel img {
+        max-height: 300px;
+    }
+}
+
 /* Fullscreen mode — make game div a flex column so chatlog fills available height. */
 .aiescape-game:fullscreen,
 .aiescape-game:-webkit-full-screen {
@@ -20,9 +43,15 @@
     overflow-y: auto;
 }
 
+.aiescape-game:fullscreen .aiescape-main,
+.aiescape-game:-webkit-full-screen .aiescape-main {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
 .aiescape-game:fullscreen #aiescape-chatlog,
 .aiescape-game:-webkit-full-screen #aiescape-chatlog {
-    flex: 1 1 0;
+    height: 100%;
     max-height: none;
     min-height: 0;
 }

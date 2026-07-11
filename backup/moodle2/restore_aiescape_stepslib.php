@@ -140,5 +140,6 @@ class restore_aiescape_activity_structure_step extends restore_activity_structur
      */
     protected function after_execute() {
         $this->add_related_files('mod_aiescape', 'intro', null);
+        $this->add_related_files('mod_aiescape', 'progressimage', null);
     }
 }

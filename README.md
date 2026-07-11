@@ -99,6 +99,7 @@ In multiple choice and combo modes, enabling **Show choice type on hover (previe
 | Display premise | Show the premise to students on the module page |
 | Display goal | Show the goal to students on the module page |
 | Steps | Number of successful moves required to complete |
+| Progress images | Images displayed alongside the conversation, switching as the student progresses |
 | Max attempts | How many attempts a student may make |
 | Show progress | Display step tally to students during play |
 | Allow student review | Let students re-read completed attempts |

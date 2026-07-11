@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/course/moodleform_mod.php');
+require_once($CFG->dirroot . '/mod/aiescape/lib.php');
 
 /**
  * Settings form for the AI Escape Room activity.
@@ -160,6 +161,13 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $mform->setType('steps', PARAM_INT);
         $mform->setDefault('steps', 10);
         $mform->addHelpButton('steps', 'steps', 'mod_aiescape');
+
+        $mform->addElement('filemanager', 'progressimages', get_string('progressimages', 'mod_aiescape'), null, [
+            'subdirs' => 0,
+            'maxfiles' => AIESCAPE_MAX_PROGRESS_IMAGES,
+            'accepted_types' => ['image'],
+        ]);
+        $mform->addHelpButton('progressimages', 'progressimages', 'mod_aiescape');
 
         // Attempt settings section.
         $mform->addElement('header', 'attemptsection', get_string('attemptsettings', 'mod_aiescape'));
@@ -319,6 +327,16 @@ class mod_aiescape_mod_form extends moodleform_mod {
         global $DB;
 
         parent::data_preprocessing($defaultvalues);
+
+        // Progress images draft area.
+        $draftitemid = file_get_submitted_draft_itemid('progressimages');
+        if ($this->current->instance) {
+            file_prepare_draft_area($draftitemid, $this->context->id, 'mod_aiescape', 'progressimage', 0, [
+                'subdirs' => 0,
+                'maxfiles' => AIESCAPE_MAX_PROGRESS_IMAGES,
+            ]);
+        }
+        $defaultvalues['progressimages'] = $draftitemid;
 
         if ($this->current->instance) {
             $buttons = $DB->get_records(

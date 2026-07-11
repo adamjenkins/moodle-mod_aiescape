@@ -38,6 +38,8 @@ function(Ajax, Notification, Templates, Str) {
     var busy = false;
     /** @type {boolean} Whether to reveal each choice's good/neutral/bad type on hover (preview only) */
     var choiceHints = false;
+    /** @type {Array<string>} Progress image URLs, ordered; image k shows at k/N of required steps */
+    var images = [];
 
     /**
      * Wrapper around core/str get_string.
@@ -65,6 +67,7 @@ function(Ajax, Notification, Templates, Str) {
             gamemode     = result.gamemode;
             steps        = result.steps;
             showProgress = result.showprogress;
+            updateImage(result.tally);
 
             var renderAll = Promise.resolve();
             result.messages.forEach(function(msg) {
@@ -145,6 +148,7 @@ function(Ajax, Notification, Templates, Str) {
             return renderMessage('assistant', result.narrative)
             .then(function() {
                 updateProgress(result.tally, result.steps);
+                updateImage(result.tally);
 
                 if (result.completed) {
                     hideQuitButton();
@@ -321,6 +325,30 @@ function(Ajax, Notification, Templates, Str) {
             return str;
         })
         .catch(Notification.exception);
+    };
+
+    /**
+     * Switches the progress image to match the current tally.
+     *
+     * With N images, image k (0-based) is shown once the student has completed
+     * k/N of the required steps; the last image shows at completion.
+     *
+     * @param {number} tally
+     */
+    var updateImage = function(tally) {
+        if (!images.length) {
+            return;
+        }
+        var img = document.getElementById('aiescape-progress-image');
+        if (!img) {
+            return;
+        }
+        var index = steps > 0
+            ? Math.min(images.length - 1, Math.floor((tally / steps) * images.length))
+            : 0;
+        if (img.getAttribute('src') !== images[index]) {
+            img.setAttribute('src', images[index]);
+        }
     };
 
     /**
@@ -560,10 +588,12 @@ function(Ajax, Notification, Templates, Str) {
          *
          * @param {number} cmidParam Course module id
          * @param {boolean} showChoiceHints Whether to reveal choice types on hover (preview only)
+         * @param {Array<string>} imageUrls Progress image URLs, ordered
          */
-        init: function(cmidParam, showChoiceHints) {
+        init: function(cmidParam, showChoiceHints, imageUrls) {
             cmid = cmidParam;
             choiceHints = !!showChoiceHints;
+            images = imageUrls || [];
 
             var startBtn = document.getElementById('aiescape-start-btn');
             if (startBtn) {

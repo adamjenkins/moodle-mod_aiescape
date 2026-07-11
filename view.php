@@ -214,6 +214,9 @@ if ($showaiinfo) {
     }
 }
 
+// Progress images, ordered by file name.
+$imageurls = aiescape_get_progress_image_urls($context);
+
 // Render the game interface.
 $templatecontext = [
     'cmid'            => $cm->id,
@@ -233,6 +236,8 @@ $templatecontext = [
     'aiproviderlabel' => $aiproviderlabel,
     'quitlabel'       => get_string('quitattempt', 'mod_aiescape'),
     'quitconfirm'     => get_string('quitattempt_confirm', 'mod_aiescape'),
+    'hasimages'       => !empty($imageurls),
+    'firstimage'      => $imageurls[0] ?? '',
 ];
 
 echo $OUTPUT->render_from_template('mod_aiescape/view', $templatecontext);
@@ -242,7 +247,7 @@ $showchoicehints = !empty($aiescape->previewhoverhints)
     && has_capability('mod/aiescape:viewreports', $context)
     && in_array($aiescape->gamemode, ['multichoice', 'combo'], true);
 
-$PAGE->requires->js_call_amd('mod_aiescape/game', 'init', [$cm->id, $showchoicehints]);
+$PAGE->requires->js_call_amd('mod_aiescape/game', 'init', [$cm->id, $showchoicehints, $imageurls]);
 
 echo html_writer::end_div();
 echo $OUTPUT->footer();

@@ -95,6 +95,7 @@ class backup_aiescape_activity_structure_step extends backup_activity_structure_
         }
 
         $aiescape->annotate_files('mod_aiescape', 'intro', null);
+        $aiescape->annotate_files('mod_aiescape', 'progressimage', null);
 
         return $this->prepare_activity_structure($aiescape);
     }

@@ -22,6 +22,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+/** @var int Maximum number of progress images that may be uploaded per activity. */
+define('AIESCAPE_MAX_PROGRESS_IMAGES', 20);
+
 /** @var string Calendar event type for the open date. */
 define('AIESCAPE_EVENT_TYPE_OPEN', 'open');
 
@@ -107,6 +110,7 @@ function aiescape_add_instance(stdClass $data, ?mod_aiescape_mod_form $form = nu
 
     aiescape_grade_item_update($data);
     aiescape_save_buttons($data);
+    aiescape_save_progress_images($data);
     aiescape_update_events($data);
 
     return $data->id;
@@ -129,6 +133,7 @@ function aiescape_update_instance(stdClass $data, ?mod_aiescape_mod_form $form =
 
     aiescape_grade_item_update($data);
     aiescape_save_buttons($data);
+    aiescape_save_progress_images($data);
     aiescape_update_events($data);
 
     return $result;
@@ -163,6 +168,95 @@ function aiescape_delete_instance($id) {
 
     $DB->delete_records('aiescape', ['id' => $id]);
 
+    return true;
+}
+
+/**
+ * Save the progress images from the form's draft area into the module file area.
+ *
+ * @param stdClass $data form data containing coursemodule and progressimages draft item id
+ */
+function aiescape_save_progress_images(stdClass $data): void {
+    if (empty($data->progressimages)) {
+        return;
+    }
+    $context = context_module::instance($data->coursemodule);
+    file_save_draft_area_files($data->progressimages, $context->id, 'mod_aiescape', 'progressimage', 0, [
+        'subdirs' => 0,
+        'maxfiles' => AIESCAPE_MAX_PROGRESS_IMAGES,
+        'accepted_types' => ['image'],
+    ]);
+}
+
+/**
+ * Returns the URLs of the activity's progress images, ordered by file name.
+ *
+ * With N images, image k (0-based) is shown once the student has completed
+ * k/N of the required steps.
+ *
+ * @param context_module $context
+ * @return string[] Image URLs
+ */
+function aiescape_get_progress_image_urls(context_module $context): array {
+    $fs = get_file_storage();
+    $files = $fs->get_area_files($context->id, 'mod_aiescape', 'progressimage', 0, 'filename', false);
+
+    $urls = [];
+    foreach ($files as $file) {
+        $urls[] = moodle_url::make_pluginfile_url(
+            $context->id,
+            'mod_aiescape',
+            'progressimage',
+            0,
+            $file->get_filepath(),
+            $file->get_filename()
+        )->out(false);
+    }
+    return $urls;
+}
+
+/**
+ * Serve files from the aiescape file areas.
+ *
+ * @param stdClass $course course object
+ * @param stdClass $cm course module object
+ * @param context $context context object
+ * @param string $filearea file area name
+ * @param array $args remaining path arguments
+ * @param bool $forcedownload whether to force download
+ * @param array $options additional options affecting file serving
+ * @return bool false if the file was not found
+ */
+function aiescape_pluginfile(
+    $course,
+    $cm,
+    $context,
+    string $filearea,
+    array $args,
+    bool $forcedownload,
+    array $options = []
+): bool {
+    if ($context->contextlevel != CONTEXT_MODULE) {
+        return false;
+    }
+    if ($filearea !== 'progressimage') {
+        return false;
+    }
+
+    require_login($course, true, $cm);
+    require_capability('mod/aiescape:view', $context);
+
+    $itemid = array_shift($args);
+    $filename = array_pop($args);
+    $filepath = $args ? '/' . implode('/', $args) . '/' : '/';
+
+    $fs = get_file_storage();
+    $file = $fs->get_file($context->id, 'mod_aiescape', $filearea, $itemid, $filepath, $filename);
+    if (!$file || $file->is_directory()) {
+        return false;
+    }
+
+    send_stored_file($file, null, 0, $forcedownload, $options);
     return true;
 }
 
