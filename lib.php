@@ -54,7 +54,7 @@ function aiescape_supports($feature) {
 function aiescape_get_coursemodule_info($coursemodule) {
     global $DB;
 
-    $aiescape = $DB->get_record('aiescape', ['id' => $coursemodule->instance], 'id, name');
+    $aiescape = $DB->get_record('aiescape', ['id' => $coursemodule->instance], 'id, name, timeopen, timeclose');
     if (!$aiescape) {
         return null;
     }
@@ -64,6 +64,14 @@ function aiescape_get_coursemodule_info($coursemodule) {
 
     if ($coursemodule->completion == COMPLETION_TRACKING_AUTOMATIC) {
         $info->customdata['customcompletionrules']['completioncompleted'] = 1;
+    }
+
+    // Populate the open/close dates for the \mod_aiescape\dates provider (course page and activity header).
+    if ($aiescape->timeopen) {
+        $info->customdata['timeopen'] = $aiescape->timeopen;
+    }
+    if ($aiescape->timeclose) {
+        $info->customdata['timeclose'] = $aiescape->timeclose;
     }
 
     return $info;

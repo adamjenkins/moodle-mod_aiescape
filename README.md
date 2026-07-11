@@ -87,6 +87,7 @@ In multiple choice and combo modes, enabling **Show choice type on hover (previe
 
 | Setting | Description |
 |---------|-------------|
+| Open/Close the escape room | Optional open and close dates (shown on the course page like the quiz module); attempts still open at the close date are automatically abandoned |
 | Premise | Describes the scenario or character the AI will portray |
 | Goal | The condition that completes the escape room |
 | Game style | Narrative (AI narrates) or Persona (AI plays a named character) |

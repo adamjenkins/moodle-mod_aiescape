@@ -100,6 +100,12 @@ class send_message extends external_api {
 
         $atman = new attempt_manager();
 
+        // A closed activity accepts no more messages; finalise the attempt instead.
+        if (empty($attempt->ispreview) && attempt_manager::is_closed($aiescape)) {
+            $atman->abandon_expired_attempt($attempt, $aiescape);
+            throw new \moodle_exception('error:closedon', 'mod_aiescape', '', userdate($aiescape->timeclose));
+        }
+
         // Reject preset-choice submissions in freetext mode (no choice buttons there).
         if ($aiescape->gamemode === 'freetext' && $choicetype !== '') {
             throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');

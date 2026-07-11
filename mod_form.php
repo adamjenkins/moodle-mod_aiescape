@@ -52,6 +52,24 @@ class mod_aiescape_mod_form extends moodleform_mod {
 
         $this->standard_intro_elements();
 
+        // Timing section (mirrors mod_quiz).
+        $mform->addElement('header', 'timing', get_string('timing', 'mod_aiescape'));
+
+        $mform->addElement(
+            'date_time_selector',
+            'timeopen',
+            get_string('gameopen', 'mod_aiescape'),
+            ['optional' => true]
+        );
+        $mform->addHelpButton('timeopen', 'gameopenclose', 'mod_aiescape');
+
+        $mform->addElement(
+            'date_time_selector',
+            'timeclose',
+            get_string('gameclose', 'mod_aiescape'),
+            ['optional' => true]
+        );
+
         // Scenario section.
         $mform->addElement('header', 'scenariosection', get_string('scenariosettings', 'mod_aiescape'));
         $mform->setExpanded('scenariosection');
@@ -350,6 +368,11 @@ class mod_aiescape_mod_form extends moodleform_mod {
         $steps = (int) ($data['steps'] ?? 0);
         if ($steps < 1 || $steps > 100) {
             $errors['steps'] = get_string('error:stepsinvalid', 'mod_aiescape');
+        }
+
+        // Check open and close times are consistent.
+        if (!empty($data['timeopen']) && !empty($data['timeclose']) && $data['timeclose'] < $data['timeopen']) {
+            $errors['timeclose'] = get_string('closebeforeopen', 'mod_aiescape');
         }
 
         if (($data['gamemode'] ?? 'multichoice') !== 'freetext') {

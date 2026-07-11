@@ -80,7 +80,14 @@ class trigger_button extends external_api {
             throw new \moodle_exception('error:invalidattempt', 'mod_aiescape');
         }
 
-        $atman    = new attempt_manager();
+        $atman = new attempt_manager();
+
+        // A closed activity accepts no more turns; finalise the attempt instead.
+        if (empty($attempt->ispreview) && attempt_manager::is_closed($aiescape)) {
+            $atman->abandon_expired_attempt($attempt, $aiescape);
+            throw new \moodle_exception('error:closedon', 'mod_aiescape', '', userdate($aiescape->timeclose));
+        }
+
         $messages = $atman->get_attempt_messages($attempt->id);
 
         // Defense in depth: the client disables exhausted buttons proactively, but

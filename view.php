@@ -143,6 +143,37 @@ if (!has_capability('mod/aiescape:play', $context)) {
 
 // Check attempt availability.
 $atman = new \mod_aiescape\attempt_manager();
+
+// Enforce the open/close window for students; previewing users may play any time.
+if (!has_capability('mod/aiescape:viewreports', $context)) {
+    if (!empty($aiescape->timeopen) && time() < $aiescape->timeopen) {
+        echo $OUTPUT->notification(
+            get_string('error:notopenyet', 'mod_aiescape', userdate($aiescape->timeopen)),
+            'info'
+        );
+        echo html_writer::end_div();
+        echo $OUTPUT->footer();
+        exit;
+    }
+    if (\mod_aiescape\attempt_manager::is_closed($aiescape)) {
+        // Finalise any attempt the student still has open.
+        if ($activeattempt = $atman->get_active_attempt($aiescape->id, $USER->id)) {
+            $atman->abandon_attempt($activeattempt, $aiescape, $course, get_fast_modinfo($course)->get_cm($cm->id));
+        }
+        echo $OUTPUT->notification(
+            get_string('error:closedon', 'mod_aiescape', userdate($aiescape->timeclose)),
+            'warning'
+        );
+        if ($aiescape->allowstudentreview && has_capability('mod/aiescape:viewownattempts', $context)) {
+            $myurl = new moodle_url('/mod/aiescape/myattempts.php', ['id' => $cm->id]);
+            echo html_writer::link($myurl, get_string('viewattempts', 'mod_aiescape'), ['class' => 'btn btn-secondary mt-2']);
+        }
+        echo html_writer::end_div();
+        echo $OUTPUT->footer();
+        exit;
+    }
+}
+
 $canstart = $atman->can_start_new_attempt($aiescape, $USER->id);
 $activeattempt = $atman->get_active_attempt($aiescape->id, $USER->id);
 

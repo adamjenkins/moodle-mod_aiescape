@@ -32,6 +32,52 @@ class attempt_manager {
     const FREETURN_TYPE = 'freeturn';
 
     /**
+     * Whether the activity is currently within its open/close window.
+     *
+     * @param stdClass $aiescape The activity record
+     * @param int|null $now Timestamp to check against (defaults to now)
+     * @return bool
+     */
+    public static function is_open(\stdClass $aiescape, ?int $now = null): bool {
+        $now = $now ?? time();
+        if (!empty($aiescape->timeopen) && $now < (int) $aiescape->timeopen) {
+            return false;
+        }
+        return !self::is_closed($aiescape, $now);
+    }
+
+    /**
+     * Whether the activity's close date has passed.
+     *
+     * @param stdClass $aiescape The activity record
+     * @param int|null $now Timestamp to check against (defaults to now)
+     * @return bool
+     */
+    public static function is_closed(\stdClass $aiescape, ?int $now = null): bool {
+        return !empty($aiescape->timeclose) && ($now ?? time()) > (int) $aiescape->timeclose;
+    }
+
+    /**
+     * Abandons an in-progress attempt whose activity close date has passed.
+     *
+     * @param stdClass $attempt  The attempt record
+     * @param stdClass $aiescape The activity record
+     * @return bool Whether the attempt was abandoned
+     */
+    public function abandon_expired_attempt(\stdClass $attempt, \stdClass $aiescape): bool {
+        global $CFG;
+
+        if ($attempt->status !== 'inprogress' || !self::is_closed($aiescape)) {
+            return false;
+        }
+        require_once($CFG->dirroot . '/mod/aiescape/lib.php');
+        $course = get_course($aiescape->course);
+        $cm = get_fast_modinfo($course)->get_instances_of('aiescape')[$aiescape->id];
+        $this->abandon_attempt($attempt, $aiescape, $course, $cm);
+        return true;
+    }
+
+    /**
      * Returns the current in-progress attempt for a user, or null if none exists.
      *
      * @param int $aiescape Activity instance id

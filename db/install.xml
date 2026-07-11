@@ -31,6 +31,8 @@
         <FIELD NAME="showchoicecounts" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether to show the good/neutral/bad choice counts to students on the module page"/>
         <FIELD NAME="previewhoverhints" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Whether teachers previewing the activity see the good/neutral/bad choice type on hover"/>
         <FIELD NAME="flagkeywords" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="One keyword/phrase per line; flags free-text student responses containing a match for teacher review"/>
+        <FIELD NAME="timeopen" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Time the activity opens for attempts; 0 means no restriction"/>
+        <FIELD NAME="timeclose" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0" COMMENT="Time the activity closes; open attempts are abandoned after this; 0 means no restriction"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" DEFAULT="0"/>
       </FIELDS>

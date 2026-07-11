@@ -44,6 +44,7 @@ class backup_aiescape_activity_structure_step extends backup_activity_structure_
             'gamemode', 'choicesgood', 'choicesneutral', 'choicesbad', 'steps', 'grade',
             'maxattempts', 'showprogress', 'allowstudentreview', 'partialscoreonquit',
             'showpremise', 'showgoal', 'showchoicecounts', 'previewhoverhints', 'flagkeywords',
+            'timeopen', 'timeclose',
             'timecreated', 'timemodified',
         ]);
 

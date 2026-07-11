@@ -229,5 +229,23 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026062700, 'aiescape');
     }
 
+    if ($oldversion < 2026071100) {
+        // Open and close dates, mirroring mod_quiz. Attempts still in progress
+        // at the close date are automatically abandoned.
+        $table = new xmldb_table('aiescape');
+
+        $field = new xmldb_field('timeopen', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'flagkeywords');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('timeclose', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'timeopen');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026071100, 'aiescape');
+    }
+
     return true;
 }

@@ -61,6 +61,20 @@ class start_attempt extends external_api {
 
         $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance], '*', MUST_EXIST);
         $manager  = new attempt_manager();
+
+        // Enforce the open/close window for students; previewing users may play any time.
+        if (!$ispreview) {
+            if (!empty($aiescape->timeopen) && time() < $aiescape->timeopen) {
+                throw new \moodle_exception('error:notopenyet', 'mod_aiescape', '', userdate($aiescape->timeopen));
+            }
+            if (attempt_manager::is_closed($aiescape)) {
+                if ($active = $manager->get_active_attempt($aiescape->id, $USER->id)) {
+                    $manager->abandon_expired_attempt($active, $aiescape);
+                }
+                throw new \moodle_exception('error:closedon', 'mod_aiescape', '', userdate($aiescape->timeclose));
+            }
+        }
+
         $attempt  = $manager->get_or_create_attempt($aiescape, $USER->id, $ispreview);
         $messages = $manager->get_attempt_messages($attempt->id);
         $buttons  = $DB->get_records('aiescape_buttons', ['aiescape' => $aiescape->id], 'sortorder ASC');

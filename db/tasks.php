@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version metadata for mod_ai_escape_room.
+ * Scheduled task definitions for mod_aiescape.
  *
  * @package    mod_aiescape
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
@@ -24,8 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'mod_aiescape';
-$plugin->version   = 2026071100; // The current module version (Date: YYYYMMDDXX).
-$plugin->requires  = 2025041400; // Moodle 5.0.
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.1.0';
+$tasks = [
+    [
+        'classname' => 'mod_aiescape\task\abandon_expired_attempts',
+        'blocking'  => 0,
+        'minute'    => 'R',
+        'hour'      => '*',
+        'day'       => '*',
+        'month'     => '*',
+        'dayofweek' => '*',
+    ],
+];
