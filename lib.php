@@ -22,6 +22,12 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+/** @var string Calendar event type for the open date. */
+define('AIESCAPE_EVENT_TYPE_OPEN', 'open');
+
+/** @var string Calendar event type for the close date. */
+define('AIESCAPE_EVENT_TYPE_CLOSE', 'close');
+
 /**
  * Returns the features this module supports.
  *
@@ -101,6 +107,7 @@ function aiescape_add_instance(stdClass $data, ?mod_aiescape_mod_form $form = nu
 
     aiescape_grade_item_update($data);
     aiescape_save_buttons($data);
+    aiescape_update_events($data);
 
     return $data->id;
 }
@@ -122,6 +129,7 @@ function aiescape_update_instance(stdClass $data, ?mod_aiescape_mod_form $form =
 
     aiescape_grade_item_update($data);
     aiescape_save_buttons($data);
+    aiescape_update_events($data);
 
     return $result;
 }
@@ -149,6 +157,7 @@ function aiescape_delete_instance($id) {
 
     $DB->delete_records('aiescape_attempts', ['aiescape' => $id]);
     $DB->delete_records('aiescape_buttons', ['aiescape' => $id]);
+    $DB->delete_records('event', ['modulename' => 'aiescape', 'instance' => $id]);
 
     aiescape_grade_item_delete($aiescape);
 
@@ -434,6 +443,244 @@ function aiescape_reset_userdata($data) {
     }
 
     return $status;
+}
+
+/**
+ * Creates, updates, or deletes the open/close calendar events for an activity instance.
+ *
+ * Mirrors quiz_update_events() (without the override handling quiz needs):
+ * separate "opens" and "closes" events, with the close event acting as the
+ * action event that drives the timeline block.
+ *
+ * @param stdClass $aiescape The activity record (form data or DB record)
+ */
+function aiescape_update_events(stdClass $aiescape): void {
+    global $CFG, $DB;
+    require_once($CFG->dirroot . '/calendar/lib.php');
+
+    $oldevents = $DB->get_records('event', ['modulename' => 'aiescape', 'instance' => $aiescape->id], 'id ASC');
+
+    if (!empty($aiescape->coursemodule)) {
+        $cmid = $aiescape->coursemodule;
+    } else {
+        $cmid = get_coursemodule_from_instance('aiescape', $aiescape->id, $aiescape->course)->id;
+    }
+
+    $event = new stdClass();
+    $event->description  = format_module_intro('aiescape', $aiescape, $cmid, false);
+    $event->format       = FORMAT_HTML;
+    $event->courseid     = $aiescape->course;
+    $event->groupid      = 0;
+    $event->userid       = 0;
+    $event->modulename   = 'aiescape';
+    $event->instance     = $aiescape->id;
+    $event->timeduration = 0;
+    $event->visible      = instance_is_visible('aiescape', $aiescape);
+    $event->priority     = null;
+
+    if (!empty($aiescape->timeopen)) {
+        if ($oldevent = array_shift($oldevents)) {
+            $event->id = $oldevent->id;
+        } else {
+            unset($event->id);
+        }
+        $event->name      = get_string('calendareventopens', 'mod_aiescape', $aiescape->name);
+        // The open event only drives the timeline when there is no close event.
+        $event->type      = empty($aiescape->timeclose) ? CALENDAR_EVENT_TYPE_ACTION : CALENDAR_EVENT_TYPE_STANDARD;
+        $event->timestart = $aiescape->timeopen;
+        $event->timesort  = $aiescape->timeopen;
+        $event->eventtype = AIESCAPE_EVENT_TYPE_OPEN;
+        calendar_event::create($event, false);
+    }
+
+    if (!empty($aiescape->timeclose)) {
+        if ($oldevent = array_shift($oldevents)) {
+            $event->id = $oldevent->id;
+        } else {
+            unset($event->id);
+        }
+        $event->name      = get_string('calendareventcloses', 'mod_aiescape', $aiescape->name);
+        $event->type      = CALENDAR_EVENT_TYPE_ACTION;
+        $event->timestart = $aiescape->timeclose;
+        $event->timesort  = $aiescape->timeclose;
+        $event->eventtype = AIESCAPE_EVENT_TYPE_CLOSE;
+        calendar_event::create($event, false);
+    }
+
+    // Delete any leftover events.
+    foreach ($oldevents as $badevent) {
+        $badevent = calendar_event::load($badevent);
+        $badevent->delete();
+    }
+}
+
+/**
+ * Refreshes the calendar events for one instance, one course, or the whole site.
+ *
+ * Standard callback used by course restore and the "Refresh calendar events" tool.
+ *
+ * @param int $courseid Course id, or 0 for all courses
+ * @param stdClass|int|null $instance Activity instance record or id
+ * @param stdClass|null $cm Unused course module (part of the callback signature)
+ * @return bool
+ */
+function aiescape_refresh_events($courseid = 0, $instance = null, $cm = null) {
+    global $DB;
+
+    if (isset($instance)) {
+        if (!is_object($instance)) {
+            $instance = $DB->get_record('aiescape', ['id' => $instance], '*', MUST_EXIST);
+        }
+        aiescape_update_events($instance);
+        return true;
+    }
+
+    $conditions = $courseid ? ['course' => $courseid] : [];
+    foreach ($DB->get_records('aiescape', $conditions) as $aiescape) {
+        aiescape_update_events($aiescape);
+    }
+    return true;
+}
+
+/**
+ * Provides the action for an aiescape calendar event (timeline / calendar blocks).
+ *
+ * @param calendar_event $event The calendar event
+ * @param \core_calendar\action_factory $factory The action factory
+ * @param int $userid User id, 0 for current user
+ * @return \core_calendar\local\event\entities\action_interface|null
+ */
+function mod_aiescape_core_calendar_provide_event_action(
+    calendar_event $event,
+    \core_calendar\action_factory $factory,
+    int $userid = 0
+) {
+    global $DB, $USER;
+
+    if (empty($userid)) {
+        $userid = $USER->id;
+    }
+
+    $cm = get_fast_modinfo($event->courseid, $userid)->instances['aiescape'][$event->instance];
+    $context = context_module::instance($cm->id);
+
+    if (!has_capability('mod/aiescape:play', $context, $userid)) {
+        return null;
+    }
+    if (!is_enrolled(context_course::instance($cm->course), $userid)) {
+        // Filter out the events for teachers and admins who are not participants.
+        return null;
+    }
+
+    $completion = new \completion_info($cm->get_course());
+    $completiondata = $completion->get_data($cm, false, $userid);
+    if ($completiondata->completionstate != COMPLETION_INCOMPLETE) {
+        return null;
+    }
+
+    $aiescape = $DB->get_record('aiescape', ['id' => $event->instance], '*', MUST_EXIST);
+
+    // Nothing to do once the activity has closed.
+    if (\mod_aiescape\attempt_manager::is_closed($aiescape)) {
+        return null;
+    }
+
+    // Nothing to do once the user has completed the scenario, or has no attempts left.
+    $manager = new \mod_aiescape\attempt_manager();
+    $hascompleted = $DB->record_exists('aiescape_attempts', [
+        'aiescape' => $aiescape->id, 'userid' => $userid, 'status' => 'completed', 'ispreview' => 0,
+    ]);
+    if ($hascompleted) {
+        return null;
+    }
+    if (!$manager->can_start_new_attempt($aiescape, $userid) && !$manager->get_active_attempt($aiescape->id, $userid)) {
+        return null;
+    }
+
+    $actionable = empty($aiescape->timeopen) || $aiescape->timeopen <= time();
+
+    return $factory->create_instance(
+        get_string('startgame', 'mod_aiescape'),
+        new \moodle_url('/mod/aiescape/view.php', ['id' => $cm->id]),
+        1,
+        $actionable
+    );
+}
+
+/**
+ * Returns the valid drag range for an aiescape calendar event in the calendar UI.
+ *
+ * @param calendar_event $event The calendar event being moved
+ * @param stdClass $aiescape The activity record
+ * @return array [min timestamp + error string | null, max timestamp + error string | null]
+ */
+function mod_aiescape_core_calendar_get_valid_event_timestart_range(\calendar_event $event, \stdClass $aiescape) {
+    $mindate = null;
+    $maxdate = null;
+
+    if ($event->eventtype == AIESCAPE_EVENT_TYPE_OPEN) {
+        if (!empty($aiescape->timeclose)) {
+            $maxdate = [
+                $aiescape->timeclose,
+                get_string('openafterclose', 'mod_aiescape'),
+            ];
+        }
+    } else if ($event->eventtype == AIESCAPE_EVENT_TYPE_CLOSE) {
+        if (!empty($aiescape->timeopen)) {
+            $mindate = [
+                $aiescape->timeopen,
+                get_string('closebeforeopen', 'mod_aiescape'),
+            ];
+        }
+    }
+
+    return [$mindate, $maxdate];
+}
+
+/**
+ * Updates the activity's open/close date when its calendar event is dragged to a new time.
+ *
+ * @param calendar_event $event The calendar event that was updated
+ * @param stdClass $aiescape The activity record
+ */
+function mod_aiescape_core_calendar_event_timestart_updated(\calendar_event $event, \stdClass $aiescape): void {
+    global $DB;
+
+    if (!in_array($event->eventtype, [AIESCAPE_EVENT_TYPE_OPEN, AIESCAPE_EVENT_TYPE_CLOSE])) {
+        return;
+    }
+
+    if ($event->modulename != 'aiescape' || $aiescape->id != $event->instance) {
+        return;
+    }
+
+    $coursemodule = get_fast_modinfo($event->courseid)->instances['aiescape'][$aiescape->id];
+    $context = context_module::instance($coursemodule->id);
+
+    if (!has_capability('moodle/course:manageactivities', $context)) {
+        return;
+    }
+
+    $modified = false;
+    if ($event->eventtype == AIESCAPE_EVENT_TYPE_OPEN) {
+        if ($aiescape->timeopen != $event->timestart) {
+            $aiescape->timeopen = $event->timestart;
+            $modified = true;
+        }
+    } else {
+        if ($aiescape->timeclose != $event->timestart) {
+            $aiescape->timeclose = $event->timestart;
+            $modified = true;
+        }
+    }
+
+    if ($modified) {
+        $aiescape->timemodified = time();
+        $DB->update_record('aiescape', $aiescape);
+        aiescape_update_events($aiescape);
+        $event = \core\event\course_module_updated::create_from_cm($coursemodule, $context);
+        $event->trigger();
+    }
 }
 
 /**

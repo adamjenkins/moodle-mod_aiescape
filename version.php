@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_aiescape';
-$plugin->version   = 2026071100; // The current module version (Date: YYYYMMDDXX).
+$plugin->version   = 2026071101; // The current module version (Date: YYYYMMDDXX).
 $plugin->requires  = 2025041400; // Moodle 5.0.
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '1.1.0';
