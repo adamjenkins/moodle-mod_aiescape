@@ -71,6 +71,10 @@ trait fake_ai_manager_trait {
      * mimicking an unreachable/erroring AI provider (which makes run_ai_turn throw
      * error:aifailed).
      *
+     * The failure is expressed by overriding get_success() rather than by passing
+     * the response's error constructor arguments, whose names/order differ between
+     * Moodle 5.0 and later — run_ai_turn only inspects get_success() on this path.
+     *
      * @return \core_ai\manager
      */
     private function fake_failing_ai_manager(): \core_ai\manager {
@@ -83,12 +87,21 @@ trait fake_ai_manager_trait {
 
             #[\Override]
             public function process_action(\core_ai\aiactions\base $action): \core_ai\aiactions\responses\response_base {
-                return new \core_ai\aiactions\responses\response_generate_text(
-                    success: false,
-                    errorcode: 1,
-                    error: 'error',
-                    errormessage: 'Simulated AI failure'
-                );
+                return new class extends \core_ai\aiactions\responses\response_generate_text {
+                    /**
+                     * Constructor. Builds a nominally-successful response (positional
+                     * success only, for cross-version compatibility); get_success()
+                     * is overridden below to report failure.
+                     */
+                    public function __construct() {
+                        parent::__construct(true);
+                    }
+
+                    #[\Override]
+                    public function get_success(): bool {
+                        return false;
+                    }
+                };
             }
         };
     }
