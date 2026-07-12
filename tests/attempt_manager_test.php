@@ -21,6 +21,11 @@ namespace mod_aiescape;
 use advanced_testcase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->dirroot . '/mod/aiescape/tests/classes/fake_ai_manager_trait.php');
+
 /**
  * Unit tests for \mod_aiescape\attempt_manager.
  *
@@ -30,6 +35,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
  */
 #[CoversClass(attempt_manager::class)]
 final class attempt_manager_test extends advanced_testcase {
+    use fake_ai_manager_trait;
+
     /**
      * Creates a course, an aiescape activity, and a student enrolled in it.
      *
@@ -125,6 +132,38 @@ final class attempt_manager_test extends advanced_testcase {
         $manager = new attempt_manager();
         $this->expectException(\moodle_exception::class);
         $manager->get_or_create_attempt($aiescape, $user->id);
+    }
+
+    /**
+     * get_attempts_by_user() fetches every real attempt for the activity in one go,
+     * grouped by user, newest first within each user, excluding preview attempts.
+     */
+    public function test_get_attempts_by_user_groups_and_orders(): void {
+        $this->resetAfterTest();
+        [$aiescape, $course, , $user1] = $this->setup_activity();
+        $user2 = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        /** @var \mod_aiescape_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_aiescape');
+
+        $old = $generator->create_attempt([
+            'aiescape' => $aiescape->id, 'userid' => $user1->id, 'status' => 'completed', 'timecreated' => 1000,
+        ]);
+        $new = $generator->create_attempt([
+            'aiescape' => $aiescape->id, 'userid' => $user1->id, 'status' => 'abandoned', 'timecreated' => 2000,
+        ]);
+        $generator->create_attempt(['aiescape' => $aiescape->id, 'userid' => $user2->id]);
+        $generator->create_attempt(['aiescape' => $aiescape->id, 'userid' => $teacher->id, 'ispreview' => 1]);
+
+        $manager = new attempt_manager();
+        $byuser = $manager->get_attempts_by_user($aiescape->id);
+
+        $this->assertCount(2, $byuser);
+        $this->assertArrayNotHasKey((int) $teacher->id, $byuser);
+        $this->assertCount(2, $byuser[$user1->id]);
+        $this->assertEquals($new->id, $byuser[$user1->id][0]->id);
+        $this->assertEquals($old->id, $byuser[$user1->id][1]->id);
+        $this->assertCount(1, $byuser[(int) $user2->id]);
     }
 
     /**
@@ -286,47 +325,6 @@ final class attempt_manager_test extends advanced_testcase {
     }
 
     /**
-     * Builds a fake \core_ai\manager that returns the given generatedcontent strings
-     * in order on successive process_action() calls, and counts how many were made.
-     *
-     * @param string[] $responses Raw AI text to return, one per expected call
-     * @param int      $callcount Receives the number of process_action() calls made
-     * @return \core_ai\manager
-     */
-    private function fake_ai_manager(array $responses, int &$callcount): \core_ai\manager {
-        $callcount = 0;
-        return new class ($responses, $callcount) extends \core_ai\manager {
-            /** @var string[] */
-            private array $responses;
-            /** @var int */
-            private int $calls = 0;
-            /** @var int Running count of process_action() calls, by reference to the caller's variable */
-            private int $callcountref;
-
-            /**
-             * Constructor.
-             *
-             * @param string[] $responses
-             * @param int      $callcount Receives the running call count by reference
-             */
-            public function __construct(array $responses, int &$callcount) {
-                $this->responses = $responses;
-                $this->callcountref = &$callcount;
-            }
-
-            #[\Override]
-            public function process_action(\core_ai\aiactions\base $action): \core_ai\aiactions\responses\response_base {
-                $text = $this->responses[$this->calls] ?? end($this->responses);
-                $this->calls++;
-                $this->callcountref = $this->calls;
-                $response = new \core_ai\aiactions\responses\response_generate_text(success: true);
-                $response->set_response_data(['generatedcontent' => $text]);
-                return $response;
-            }
-        };
-    }
-
-    /**
      * run_ai_turn() retries up to the configured limit when the AI keeps returning
      * the wrong choice counts, then falls back to a single "free turn" choice
      * instead of inventing placeholder choices.
@@ -348,6 +346,53 @@ final class attempt_manager_test extends advanced_testcase {
         $this->assertSame(3, $callcount);
         $this->assertCount(1, $result['choices']);
         $this->assertSame(attempt_manager::FREETURN_TYPE, $result['choices'][0]['type']);
+    }
+
+    /**
+     * run_ai_turn() shuffles the choices server-side so their position in the
+     * response cannot reveal their good/neutral/bad classification (the parser
+     * groups them good-first, which would otherwise leak the type by array order).
+     */
+    public function test_run_ai_turn_shuffles_choices(): void {
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 0, 'mod_aiescape');
+        [$aiescape, , $cm, $user] = $this->setup_activity([
+            'gamemode' => 'multichoice', 'choicesgood' => 2, 'choicesneutral' => 2, 'choicesbad' => 2,
+        ]);
+        $context = \context_module::instance($cm->id);
+
+        $response = json_encode([
+            'narrative' => 'x', 'completed' => false, 'stepchange' => 0,
+            'choices' => [
+                ['label' => 'G1', 'type' => 'good'],
+                ['label' => 'G2', 'type' => 'good'],
+                ['label' => 'N1', 'type' => 'neutral'],
+                ['label' => 'N2', 'type' => 'neutral'],
+                ['label' => 'B1', 'type' => 'bad'],
+                ['label' => 'B2', 'type' => 'bad'],
+            ],
+        ]);
+
+        $manager = new attempt_manager();
+        $expectedlabels = ['B1', 'B2', 'G1', 'G2', 'N1', 'N2'];
+        $firstisalwaysgood = true;
+
+        // With a fair shuffle, P(first choice is good every run) = (1/3)^15 ≈ 7e-8.
+        for ($i = 0; $i < 15; $i++) {
+            $callcount = 0;
+            \core\di::set(\core_ai\manager::class, $this->fake_ai_manager([$response], $callcount));
+            $result = $manager->run_ai_turn($aiescape, $context, $user->id, [], 0);
+
+            $labels = array_column($result['choices'], 'label');
+            sort($labels);
+            $this->assertSame($expectedlabels, $labels);
+
+            if ($result['choices'][0]['type'] !== 'good') {
+                $firstisalwaysgood = false;
+            }
+        }
+
+        $this->assertFalse($firstisalwaysgood, 'Choice order must not deterministically lead with good choices.');
     }
 
     /**

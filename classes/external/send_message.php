@@ -38,15 +38,9 @@ class send_message extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'cmid'       => new external_value(PARAM_INT, 'Course module ID'),
-            'attemptid'  => new external_value(PARAM_INT, 'Attempt ID'),
-            'message'    => new external_value(PARAM_TEXT, 'Student message text (freetext/combo modes)', VALUE_DEFAULT, ''),
-            'choicetype' => new external_value(
-                PARAM_ALPHA,
-                'Choice type: good, neutral, bad (multichoice/combo), or freeturn (fallback turn)',
-                VALUE_DEFAULT,
-                ''
-            ),
+            'cmid'        => new external_value(PARAM_INT, 'Course module ID'),
+            'attemptid'   => new external_value(PARAM_INT, 'Attempt ID'),
+            'message'     => new external_value(PARAM_TEXT, 'Student message text (freetext/combo modes)', VALUE_DEFAULT, ''),
             'choicelabel' => new external_value(PARAM_TEXT, 'The label of the selected choice', VALUE_DEFAULT, ''),
         ]);
     }
@@ -57,7 +51,6 @@ class send_message extends external_api {
      * @param int    $cmid
      * @param int    $attemptid
      * @param string $message
-     * @param string $choicetype
      * @param string $choicelabel
      * @return array
      */
@@ -65,7 +58,6 @@ class send_message extends external_api {
         int $cmid,
         int $attemptid,
         string $message,
-        string $choicetype,
         string $choicelabel
     ): array {
         global $DB, $USER;
@@ -74,11 +66,10 @@ class send_message extends external_api {
             'cmid'        => $cmid,
             'attemptid'   => $attemptid,
             'message'     => $message,
-            'choicetype'  => $choicetype,
             'choicelabel' => $choicelabel,
         ] = self::validate_parameters(
             self::execute_parameters(),
-            compact('cmid', 'attemptid', 'message', 'choicetype', 'choicelabel')
+            compact('cmid', 'attemptid', 'message', 'choicelabel')
         );
 
         [, $cm] = get_course_and_cm_from_cmid($cmid, 'aiescape');
@@ -106,51 +97,60 @@ class send_message extends external_api {
             throw new \moodle_exception('error:closedon', 'mod_aiescape', '', userdate($aiescape->timeclose));
         }
 
-        // Reject preset-choice submissions in freetext mode (no choice buttons there).
-        if ($aiescape->gamemode === 'freetext' && $choicetype !== '') {
-            throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
-        }
+        // Choice submissions carry only the label. The server resolves the choice's
+        // good/neutral/bad type from the offered set it stored last turn, so the
+        // classification never exists client-side and cannot be read or forged.
+        $usermessagetext = $message;
+        $presetchange    = null;
+        $matchedtype     = null;
+        $isfreeturn      = false;
 
-        // Validate the submitted choice against the server-stored offered choices so
-        // that a student cannot forge a choicetype the AI never offered this turn.
-        if ($choicetype !== '') {
-            $offeredchoices = $atman->get_offered_choices($attempt->id);
-            $matched = false;
-            foreach ($offeredchoices as $c) {
-                if ($c['type'] === $choicetype && $c['label'] === $choicelabel) {
-                    $matched = true;
+        if ($choicelabel !== '') {
+            // Reject choice submissions in freetext mode (no choice buttons there).
+            if ($aiescape->gamemode === 'freetext') {
+                throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
+            }
+
+            $matched = null;
+            foreach ($atman->get_offered_choices($attempt->id) as $c) {
+                if ($c['label'] === $choicelabel) {
+                    $matched = $c;
                     break;
                 }
             }
-            if (!$matched) {
+            if ($matched === null) {
                 throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
             }
-        }
 
-        // Determine the user-facing message text and step delta from choice.
-        $isfreeturn      = ($choicetype === attempt_manager::FREETURN_TYPE);
-        $usermessagetext = $message;
-        $presetchange    = null;
+            $matchedtype = $matched['type'];
+            $isfreeturn  = ($matchedtype === attempt_manager::FREETURN_TYPE);
 
-        if ($choicetype !== '' && in_array($choicetype, ['good', 'neutral', 'bad'], true)) {
-            $usermessagetext = $choicelabel ?: $choicetype;
-            $presetchange    = match ($choicetype) {
-                'good'    => 1,
-                'neutral' => 0,
-                'bad'     => -1,
-            };
-        } else if ($isfreeturn) {
-            // The free-turn fallback always sends a fixed, server-controlled message;
-            // never trust the client for what gets sent to the AI here.
-            $usermessagetext = get_string('freeturnmessage', 'mod_aiescape');
+            if ($isfreeturn) {
+                // The free-turn fallback always sends a fixed, server-controlled message;
+                // never trust the client for what gets sent to the AI here.
+                $usermessagetext = get_string('freeturnmessage', 'mod_aiescape');
+            } else {
+                $usermessagetext = $choicelabel;
+                $presetchange    = match ($matchedtype) {
+                    'good'    => 1,
+                    'neutral' => 0,
+                    'bad'     => -1,
+                    default   => 0,
+                };
+            }
+        } else if ($aiescape->gamemode === 'multichoice' && trim($message) !== '') {
+            // Multichoice mode accepts no free-typed text: allowing it would let a
+            // direct web-service call buy an AI-evaluated (injectable) scoring turn.
+            // Only the empty opening/refresh request is a valid non-choice turn.
+            throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
         }
 
         // Record the student's message.
-        $messageid = $atman->record_message($attemptid, 'user', $usermessagetext, $choicetype ?: null, $presetchange);
+        $messageid = $atman->record_message($attemptid, 'user', $usermessagetext, $matchedtype, $presetchange);
 
         // Flag the message for teacher review if it matches a configured keyword.
         // Only applies to free-typed responses (not fixed multichoice button labels).
-        if ($choicetype === '' && $aiescape->gamemode !== 'multichoice' && !empty($aiescape->flagkeywords)) {
+        if ($choicelabel === '' && $aiescape->gamemode !== 'multichoice' && !empty($aiescape->flagkeywords)) {
             $atman->flag_message_if_matched($messageid, $attemptid, $usermessagetext, $aiescape->flagkeywords);
         }
 
@@ -187,9 +187,14 @@ class send_message extends external_api {
         // Clear on completion — the attempt is closed, so no next turn exists.
         $atman->store_offered_choices($attemptid, $completed ? [] : $result['choices']);
 
+        // Only reveal choice types when the preview hover-hints feature applies;
+        // students must never receive the classification.
+        $revealtypes = !empty($aiescape->previewhoverhints)
+            && has_capability('mod/aiescape:viewreports', $context);
+
         return [
             'narrative'  => $result['narrative'],
-            'choices'    => $result['choices'],
+            'choices'    => attempt_manager::export_choices($result['choices'], $revealtypes),
             'completed'  => $completed,
             'canrestart' => $atman->can_start_new_attempt($aiescape, $USER->id, (bool) $attempt->ispreview),
             'tally'      => (int) $attempt->stepstally,
@@ -208,8 +213,13 @@ class send_message extends external_api {
             'narrative'  => new external_value(PARAM_RAW, 'AI narrative response'),
             'choices'    => new external_multiple_structure(
                 new external_single_structure([
-                    'label' => new external_value(PARAM_TEXT, 'Choice label'),
-                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, bad, or freeturn'),
+                    'label'      => new external_value(PARAM_TEXT, 'Choice label'),
+                    'isfreeturn' => new external_value(PARAM_BOOL, 'Whether this is the fallback free turn'),
+                    'type'       => new external_value(
+                        PARAM_ALPHA,
+                        'good/neutral/bad; only included for the preview hover-hints feature',
+                        VALUE_OPTIONAL
+                    ),
                 ])
             ),
             'completed'  => new external_value(PARAM_BOOL, 'Whether the attempt is now completed'),

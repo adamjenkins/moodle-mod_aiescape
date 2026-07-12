@@ -388,6 +388,13 @@ class mod_aiescape_mod_form extends moodleform_mod {
             $errors['steps'] = get_string('error:stepsinvalid', 'mod_aiescape');
         }
 
+        // Scales are stored as negative grade values; the grading code (grade item,
+        // partial scoring, report) only supports point grades, so reject them here
+        // rather than creating a broken gradebook column.
+        if ((int) ($data['grade'] ?? 0) < 0) {
+            $errors['grade'] = get_string('error:scalegradesnotsupported', 'mod_aiescape');
+        }
+
         // Check open and close times are consistent.
         if (!empty($data['timeopen']) && !empty($data['timeclose']) && $data['timeclose'] < $data['timeopen']) {
             $errors['timeclose'] = get_string('closebeforeopen', 'mod_aiescape');

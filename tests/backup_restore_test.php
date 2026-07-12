@@ -123,6 +123,43 @@ final class backup_restore_test extends restore_date_testcase {
     }
 
     /**
+     * Encoded view.php self-links in the intro and premise are decoded again on
+     * restore (pointing at the restored course module, not left as encoded tokens).
+     */
+    public function test_backup_restore_decodes_content_links(): void {
+        global $CFG, $DB;
+
+        $course = $this->getDataGenerator()->create_course(['startdate' => $this->startdate]);
+        $aiescape = $this->getDataGenerator()->create_module('aiescape', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('aiescape', $aiescape->id, 0, false, MUST_EXIST);
+
+        $url = $CFG->wwwroot . '/mod/aiescape/view.php?id=' . $cm->id;
+        $DB->update_record('aiescape', (object) [
+            'id'      => $aiescape->id,
+            'intro'   => 'Replay <a href="' . $url . '">the room</a> first.',
+            'premise' => 'You escaped ' . $url . ' once before.',
+        ]);
+
+        $newcourseid = $this->backup_and_restore($course);
+
+        $newaiescape = $DB->get_record('aiescape', ['course' => $newcourseid], '*', MUST_EXIST);
+        $newcm = get_coursemodule_from_instance('aiescape', $newaiescape->id, 0, false, MUST_EXIST);
+
+        foreach (['intro', 'premise'] as $field) {
+            $this->assertStringNotContainsString(
+                'AIESCAPEVIEWBYID',
+                $newaiescape->$field,
+                "Encoded link token left undecoded in '$field' after restore."
+            );
+            $this->assertStringContainsString(
+                '/mod/aiescape/view.php?id=' . $newcm->id,
+                $newaiescape->$field,
+                "Restored '$field' should link to the restored course module."
+            );
+        }
+    }
+
+    /**
      * Flagged messages (the aiescape_flags table) round-trip and remain linked to the
      * correct restored message and attempt.
      */

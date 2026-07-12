@@ -88,7 +88,7 @@ function(Ajax, Notification, Templates, Str) {
                 if (result.messages.length === 0) {
                     busy = false;
                     // sendMessage owns loading from here — don't call setLoading(false).
-                    return sendMessage('', '', '');
+                    return sendMessage('', '');
                 }
 
                 busy = false;
@@ -96,7 +96,7 @@ function(Ajax, Notification, Templates, Str) {
                 if (lastMsg && lastMsg.role === 'assistant' &&
                         (gamemode === 'multichoice' || gamemode === 'combo')) {
                     // sendMessage owns loading from here.
-                    return sendMessage('', '', '');
+                    return sendMessage('', '');
                 }
 
                 enableInput();
@@ -117,12 +117,14 @@ function(Ajax, Notification, Templates, Str) {
      * Returns a Promise so callers (e.g. startAttempt) can properly chain and
      * wait before they clean up their own loading state.
      *
+     * The server resolves the selected choice entirely from its label; the
+     * choice's good/neutral/bad type never exists client-side.
+     *
      * @param {string} message     Free-text message (may be empty)
-     * @param {string} choicetype  'good', 'neutral', 'bad', or ''
      * @param {string} choicelabel The label of the selected choice
      * @returns {Promise}
      */
-    var sendMessage = function(message, choicetype, choicelabel) {
+    var sendMessage = function(message, choicelabel) {
         if (busy) {
             return Promise.resolve();
         }
@@ -140,7 +142,6 @@ function(Ajax, Notification, Templates, Str) {
                 cmid: cmid,
                 attemptid: attemptId,
                 message: message.trim(),
-                choicetype: choicetype,
                 choicelabel: choicelabel,
             });
         })
@@ -236,9 +237,12 @@ function(Ajax, Notification, Templates, Str) {
     };
 
     /**
-     * Renders (or replaces) the three primary choice buttons in random order.
+     * Renders (or replaces) the primary choice buttons in random order.
      *
-     * @param {Array<{label: string, type: string}>} choices
+     * Each choice carries only its label and an isfreeturn flag; the optional
+     * type field is present only for the preview hover-hints feature.
+     *
+     * @param {Array<{label: string, isfreeturn: boolean, type: string|undefined}>} choices
      */
     var renderChoices = function(choices) {
         var container = document.getElementById('aiescape-choices');
@@ -255,8 +259,8 @@ function(Ajax, Notification, Templates, Str) {
         shuffled.forEach(function(choice) {
             var btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = (choice.type === 'freeturn') ? 'btn btn-outline-primary' : 'btn btn-primary';
-            if (choiceHints && choice.type !== 'freeturn') {
+            btn.className = choice.isfreeturn ? 'btn btn-outline-primary' : 'btn btn-primary';
+            if (choiceHints && choice.type) {
                 btn.classList.add('aiescape-choice-hint-' + choice.type);
                 getString('choicehint_' + choice.type, 'mod_aiescape').then(function(label) {
                     btn.title = label;
@@ -267,7 +271,7 @@ function(Ajax, Notification, Templates, Str) {
             btn.addEventListener('click', function() {
                 container.innerHTML = '';
                 container.classList.add('d-none');
-                sendMessage('', choice.type, choice.label);
+                sendMessage('', choice.label);
             });
             container.appendChild(btn);
         });
@@ -549,7 +553,7 @@ function(Ajax, Notification, Templates, Str) {
                         return;
                     }
                     freetext.value = '';
-                    sendMessage(text, '', '');
+                    sendMessage(text, '');
                 });
                 freetext.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter' && !e.shiftKey) {

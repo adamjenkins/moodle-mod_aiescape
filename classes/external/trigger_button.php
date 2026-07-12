@@ -111,9 +111,14 @@ class trigger_button extends external_api {
         // Persist the choices the AI offered so the next send_message can validate against them.
         $atman->store_offered_choices($attemptid, $choices);
 
+        // Only reveal choice types when the preview hover-hints feature applies;
+        // students must never receive the classification.
+        $revealtypes = !empty($aiescape->previewhoverhints)
+            && has_capability('mod/aiescape:viewreports', $context);
+
         return [
             'narrative' => $result['narrative'],
-            'choices'   => $choices,
+            'choices'   => attempt_manager::export_choices($choices, $revealtypes),
             'remaining' => attempt_manager::usage_remaining($button, $messages),
         ];
     }
@@ -128,8 +133,13 @@ class trigger_button extends external_api {
             'narrative' => new external_value(PARAM_RAW, 'AI response to the button prompt'),
             'choices'   => new external_multiple_structure(
                 new external_single_structure([
-                    'label' => new external_value(PARAM_TEXT, 'Choice label'),
-                    'type'  => new external_value(PARAM_ALPHA, 'good, neutral, bad, or freeturn'),
+                    'label'      => new external_value(PARAM_TEXT, 'Choice label'),
+                    'isfreeturn' => new external_value(PARAM_BOOL, 'Whether this is the fallback free turn'),
+                    'type'       => new external_value(
+                        PARAM_ALPHA,
+                        'good/neutral/bad; only included for the preview hover-hints feature',
+                        VALUE_OPTIONAL
+                    ),
                 ])
             ),
             'remaining' => new external_value(PARAM_INT, 'Uses left this attempt; -1 means unlimited'),

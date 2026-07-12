@@ -156,6 +156,28 @@ final class response_parser_test extends advanced_testcase {
     }
 
     /**
+     * A choice set containing duplicate labels is discarded entirely: the label a
+     * student submits must unambiguously identify a single offered choice, because
+     * the server resolves the choice's type from the label alone.
+     */
+    public function test_parse_discards_choices_when_labels_are_ambiguous(): void {
+        $parser = new response_parser();
+        $json = json_encode([
+            'narrative' => 'x',
+            'choices'   => [
+                ['label' => 'Open the door', 'type' => 'good'],
+                ['label' => 'Open the door', 'type' => 'bad'],
+                ['label' => 'Wait', 'type' => 'neutral'],
+            ],
+        ]);
+
+        $result = $parser->parse($json, 'multichoice', 1, 1, 1);
+
+        $this->assertSame([], $result['choices']);
+        $this->assertFalse($parser->choices_match_expected($result['choices'], 1, 1, 1));
+    }
+
+    /**
      * Choices are only parsed for multichoice/combo modes; freetext mode ignores them.
      */
     public function test_parse_ignores_choices_in_freetext_mode(): void {

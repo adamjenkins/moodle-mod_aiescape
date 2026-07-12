@@ -275,10 +275,12 @@ if (empty($students)) {
     exit;
 }
 
-// Build per-student stats rows for sorting.
+// Build per-student stats rows for sorting. All attempts are fetched in one
+// query and grouped by user, rather than one query per student.
+$attemptsbyuser = $atman->get_attempts_by_user((int) $aiescape->id);
 $rows = [];
 foreach ($students as $student) {
-    $userattempts = $atman->get_user_attempts($aiescape->id, $student->id);
+    $userattempts = $attemptsbyuser[(int) $student->id] ?? [];
     $numcompleted = count(array_filter($userattempts, fn($a) => $a->status === 'completed'));
     $numabandoned = count(array_filter($userattempts, fn($a) => $a->status === 'abandoned'));
     $lasttimestamp = !empty($userattempts) ? reset($userattempts)->timecreated : 0;

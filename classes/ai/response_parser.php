@@ -174,6 +174,14 @@ class response_parser {
             $choices[] = $c;
         }
 
+        // The submitted label must unambiguously identify a single offered choice
+        // (the server resolves the choice's type from the label alone), so a set
+        // containing duplicate labels is unusable; discard it for retry/fallback.
+        $labels = array_column($choices, 'label');
+        if (count($labels) !== count(array_unique($labels))) {
+            return [];
+        }
+
         return $choices;
     }
 

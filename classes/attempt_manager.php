@@ -186,6 +186,31 @@ class attempt_manager {
     }
 
     /**
+     * Returns all real (non-preview) attempts for an activity in a single query,
+     * grouped by user id, newest first within each user.
+     *
+     * Used by the report so it does not need one query per student.
+     *
+     * @param int $aiescape Activity instance id
+     * @return array<int, stdClass[]> Attempt records keyed by user id
+     */
+    public function get_attempts_by_user(int $aiescape): array {
+        global $DB;
+
+        $attempts = $DB->get_records(
+            'aiescape_attempts',
+            ['aiescape' => $aiescape, 'ispreview' => 0],
+            'timecreated DESC, id DESC'
+        );
+
+        $byuser = [];
+        foreach ($attempts as $attempt) {
+            $byuser[(int) $attempt->userid][] = $attempt;
+        }
+        return $byuser;
+    }
+
+    /**
      * Returns all messages for an attempt, oldest first.
      *
      * @param int $attemptid
@@ -324,9 +349,15 @@ class attempt_manager {
             ]];
         }
 
+        // Shuffle server-side: the parser groups choices good-first, so without
+        // this the array position would reveal each choice's classification even
+        // when the type itself is not sent to the client.
+        $choices = array_map(fn($c) => ['label' => $c['label'], 'type' => $c['type']], $parsed['choices']);
+        shuffle($choices);
+
         return [
             'narrative'  => $parsed['narrative'],
-            'choices'    => array_map(fn($c) => ['label' => $c['label'], 'type' => $c['type']], $parsed['choices']),
+            'choices'    => $choices,
             'stepchange' => $parsed['stepchange'],
         ];
     }
@@ -384,6 +415,32 @@ class attempt_manager {
                 return;
             }
         }
+    }
+
+    /**
+     * Prepares an offered-choice set for return to the client.
+     *
+     * The good/neutral/bad classification is stripped unless $revealtypes is set
+     * (the preview hover-hints feature): a student who inspects the AJAX payload
+     * must not be able to identify the advancing choice. The freeturn fallback
+     * keeps an isfreeturn marker — it is the only choice offered when it appears,
+     * so the marker reveals nothing.
+     *
+     * @param array $choices     Array of ['label' => string, 'type' => string]
+     * @param bool  $revealtypes Whether to include the good/neutral/bad type
+     * @return array Array of ['label' => string, 'isfreeturn' => bool, ?'type' => string]
+     */
+    public static function export_choices(array $choices, bool $revealtypes): array {
+        return array_map(function (array $c) use ($revealtypes): array {
+            $out = [
+                'label'      => $c['label'],
+                'isfreeturn' => $c['type'] === self::FREETURN_TYPE,
+            ];
+            if ($revealtypes && !$out['isfreeturn']) {
+                $out['type'] = $c['type'];
+            }
+            return $out;
+        }, $choices);
     }
 
     /**

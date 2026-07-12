@@ -50,7 +50,9 @@ class restore_aiescape_activity_task extends restore_activity_task {
      * @return array
      */
     public static function define_decode_contents() {
-        return [];
+        return [
+            new restore_decode_content('aiescape', ['intro', 'premise', 'goal'], 'aiescape'),
+        ];
     }
 
     /**

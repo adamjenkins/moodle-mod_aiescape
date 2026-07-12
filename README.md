@@ -6,6 +6,10 @@ A Moodle activity plugin that creates an AI-driven interactive escape room exper
 
 Choice submissions are validated server-side. The server records the exact set of choices the AI offered each turn and rejects any submission that does not match — preventing grade forgery via direct web-service calls and ensuring keyword-flagging cannot be bypassed by routing free text through the choice label field.
 
+The good/neutral/bad classification of each choice never leaves the server: responses carry only the choice labels (shuffled server-side so ordering reveals nothing), the client submits only the selected label, and the server resolves the step delta from the offered set it stored for that turn. A student inspecting the AJAX traffic therefore cannot identify the advancing choice. In multiple-choice mode the web service also rejects free-typed text outright, so the AI-evaluated scoring path cannot be reached from an activity configured for choices only.
+
+**Free-text scoring is advisory.** In free-text and combo modes, the per-turn step delta is produced by the AI model reading the student's own words, and a determined student may be able to influence it with carefully-worded input (prompt injection). The impact is bounded — the delta is clamped to ±1 per turn and only ever affects the student's own grade — but these modes are best suited to formative, low-stakes use. Multiple-choice progress is evaluated entirely server-side and is not open to this influence.
+
 ## Requirements
 
 - Moodle 5.0 or later (requires `core_ai`)
@@ -69,6 +73,7 @@ Teachers can configure a list of keywords or phrases (one per line, case-insensi
 ### Grading
 
 - Standard Moodle gradebook integration via `core_grades`
+- Point grades only — selecting a scale is rejected in the activity settings, as the proportional scoring model does not map onto scale items
 - Completed attempts receive full grade; abandoned attempts can receive partial grade (configurable per activity)
 - Grade-based and passing-grade completion tracking work correctly (`completionusegrade`, `completionpassgrade`)
 - Grade item `idnumber` is synchronised with the course module's ID number (`cmidnumber`), enabling grade-import by column and outcome mapping

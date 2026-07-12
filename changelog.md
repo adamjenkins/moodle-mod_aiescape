@@ -2,6 +2,23 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
+## [1.1.1] - 2026-07-11
+
+### Security
+
+- **Choice classifications no longer reach the browser** (self grade-inflation hardening, MDL Shield finding): `send_message` and `trigger_button` now return only each choice's label plus an `isfreeturn` marker. Choices are shuffled server-side, since the parser's good-first grouping would otherwise reveal the classification by array position alone. The client submits only the selected label, and the server resolves the good/neutral/bad step delta from the offered set it stored for that turn; choice sets with duplicate labels are rejected and re-requested from the AI so a label always identifies exactly one choice. The preview hover-hints feature still receives the types, but only for users with `mod/aiescape:viewreports` on activities where it is enabled.
+- **Multiple-choice mode now rejects free-typed text** sent directly to the web service, closing an unintended path to AI-evaluated (prompt-injectable) scoring in choice-only activities.
+
+### Fixed
+
+- **Scale grades are rejected in the activity settings** with a clear validation message instead of silently creating a broken gradebook column with a negative maximum (the grading code supports point grades only).
+- **Links in intro/premise/goal are decoded again on restore**: `define_decode_contents()` returned an empty array, so `view.php` self-links encoded during backup were left as `$@AIESCAPEVIEWBYID*…@$` tokens after restore.
+
+### Changed
+
+- The teacher report fetches all attempts in one query instead of one query per student.
+- Documented that free-text/combo AI scoring is advisory and best suited to formative use (README, game mode help text).
+
 ## [1.1.0] - 2026-07-11
 
 ### Added

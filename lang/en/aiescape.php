@@ -97,6 +97,7 @@ $string['error:nopermission'] = 'You do not have permission to perform this acti
 $string['error:notopenyet'] = 'This activity opens on {$a}.';
 $string['error:personanamerequired'] = 'A persona name is required when Persona style is selected.';
 $string['error:premiserequired'] = 'A premise is required.';
+$string['error:scalegradesnotsupported'] = 'AI Escape Room only supports point grades; please select a maximum grade instead of a scale.';
 $string['error:stepsinvalid'] = 'Steps to complete must be a whole number between 1 and 100.';
 $string['eventattemptabandoned'] = 'Attempt abandoned';
 $string['eventattemptcompleted'] = 'Attempt completed';
@@ -113,7 +114,9 @@ $string['gameclose'] = 'Close the escape room';
 $string['gamemode'] = 'Game mode';
 $string['gamemode_combo'] = 'Combo (buttons + text)';
 $string['gamemode_freetext'] = 'Free text';
-$string['gamemode_help'] = 'Controls how students respond to the AI. Multichoice presents three labelled buttons. Freetext provides a text input. Combo shows both.';
+$string['gamemode_help'] = 'Controls how students respond to the AI. Multichoice presents labelled choice buttons. Freetext provides a text input. Combo shows both.
+
+Note: in Freetext and Combo modes, each free-typed response is scored by the AI model itself. This scoring is advisory — a student determined to game it may be able to influence the model with carefully-worded input — so these modes are best suited to formative (low-stakes) activities. Multichoice progress is evaluated entirely on the server and is not open to this influence.';
 $string['gamemode_multichoice'] = 'Multiple choice';
 $string['gameopen'] = 'Open the escape room';
 $string['gameopenclose'] = 'Open and close dates';
