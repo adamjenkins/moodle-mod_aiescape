@@ -1,4 +1,4 @@
-## [1.1.1] - 2026-07-11
+## [1.1.1] - 2026-07-12
 
 ### Security
 
@@ -9,6 +9,7 @@
 
 - **Scale grades are rejected in the activity settings** with a clear validation message instead of silently creating a broken gradebook column with a negative maximum (the grading code supports point grades only).
 - **Links in intro/premise/goal are decoded again on restore**: `define_decode_contents()` returned an empty array, so `view.php` self-links encoded during backup were left as `$@AIESCAPEVIEWBYID*…@$` tokens after restore.
+- **Attempts stranded by a failed AI turn now recover.** If an AI turn failed (for example, the provider was unreachable), the attempt could be left with an orphan user message and — in multiple-choice mode, which has no free-text input — no way to continue. A turn's messages are now persisted only after the AI call succeeds, so a failed turn leaves the tally and conversation untouched and can simply be retried; and resuming an attempt whose last message is the student's re-requests the interrupted turn, recovering attempts left stranded by earlier versions.
 
 ### Changed
 
