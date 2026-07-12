@@ -332,6 +332,86 @@ final class send_message_test extends advanced_testcase {
         $this->assertArrayNotHasKey('type', $result['choices'][0]);
     }
 
+    /**
+     * A failed opening turn persists no messages, so the attempt is not stranded:
+     * a subsequent start/resume sees an empty history and can retry the turn.
+     */
+    public function test_failed_opening_turn_persists_no_messages(): void {
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 0, 'mod_aiescape');
+        [, $cm, $user, $attempt] = $this->setup_attempt();
+
+        \core\di::set(\core_ai\manager::class, $this->fake_failing_ai_manager());
+        $this->setUser($user);
+
+        try {
+            send_message::execute($cm->id, $attempt->id, '', '');
+            $this->fail('Expected error:aifailed to be thrown');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('aifailed', $e->errorcode);
+        }
+
+        $messages = (new attempt_manager())->get_attempt_messages($attempt->id);
+        $this->assertCount(0, $messages, 'A failed opening turn must not leave an orphan message.');
+    }
+
+    /**
+     * A failed mid-game choice turn persists nothing and leaves the tally unchanged,
+     * so the student can simply pick again rather than being stranded.
+     */
+    public function test_failed_choice_turn_persists_nothing_and_keeps_tally(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 0, 'mod_aiescape');
+        [, $cm, $user, $attempt] = $this->setup_attempt();
+        $DB->set_field('aiescape_attempts', 'stepstally', 2, ['id' => $attempt->id]);
+
+        // Simulate an existing turn: one prior assistant message and stored choices.
+        (new attempt_manager())->record_message($attempt->id, 'assistant', 'Earlier narrative.', null, 0);
+        $this->store_standard_choices($attempt->id);
+        $before = (new attempt_manager())->get_attempt_messages($attempt->id);
+
+        \core\di::set(\core_ai\manager::class, $this->fake_failing_ai_manager());
+        $this->setUser($user);
+
+        try {
+            send_message::execute($cm->id, $attempt->id, '', 'Pick the lock');
+            $this->fail('Expected error:aifailed to be thrown');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('aifailed', $e->errorcode);
+        }
+
+        $after = (new attempt_manager())->get_attempt_messages($attempt->id);
+        $this->assertCount(count($before), $after, 'A failed choice turn must not persist the user message.');
+        $reloaded = $DB->get_record('aiescape_attempts', ['id' => $attempt->id]);
+        $this->assertEquals(2, $reloaded->stepstally, 'Tally must be unchanged after a failed turn.');
+    }
+
+    /**
+     * A refresh call ('' , '') on an attempt whose last message is an orphan user
+     * message (left by an older interrupted turn) generates the assistant reply
+     * without adding another user message — recovering a previously stranded attempt.
+     */
+    public function test_refresh_recovers_attempt_with_orphan_user_message(): void {
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 0, 'mod_aiescape');
+        [, $cm, $user, $attempt] = $this->setup_attempt();
+
+        // Reproduce an attempt stranded by the old code: a lone empty user message.
+        (new attempt_manager())->record_message($attempt->id, 'user', '', null, null);
+
+        $callcount = 0;
+        \core\di::set(\core_ai\manager::class, $this->fake_ai_manager([$this->valid_turn_json()], $callcount));
+        $this->setUser($user);
+
+        $result = send_message::execute($cm->id, $attempt->id, '', '');
+
+        $messages = (new attempt_manager())->get_attempt_messages($attempt->id);
+        $roles = array_map(fn($m) => $m->role, $messages);
+        $this->assertSame(['user', 'assistant'], $roles, 'Refresh should add only the assistant reply.');
+        $this->assertCount(3, $result['choices']);
+    }
+
     #[\Override]
     protected function tearDown(): void {
         // Undo any \core_ai\manager DI override so it doesn't leak into other tests.

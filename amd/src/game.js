@@ -93,8 +93,17 @@ function(Ajax, Notification, Templates, Str) {
 
                 busy = false;
                 var lastMsg = result.messages[result.messages.length - 1];
-                if (lastMsg && lastMsg.role === 'assistant' &&
-                        (gamemode === 'multichoice' || gamemode === 'combo')) {
+                // Re-run the turn from the server when either:
+                //  - the last message is the AI's (multichoice/combo need fresh choice
+                //    buttons, which aren't part of the stored history), or
+                //  - the last message is the student's, meaning a previous turn was
+                //    interrupted before the AI replied (e.g. the AI call failed). The
+                //    server generates the missing reply without adding a duplicate
+                //    user message, recovering an otherwise stranded attempt.
+                var lastIsUser = lastMsg && lastMsg.role === 'user';
+                var lastIsAiChoice = lastMsg && lastMsg.role === 'assistant' &&
+                        (gamemode === 'multichoice' || gamemode === 'combo');
+                if (lastIsUser || lastIsAiChoice) {
                     // sendMessage owns loading from here.
                     return sendMessage('', '');
                 }

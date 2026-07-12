@@ -100,6 +100,54 @@ final class trigger_button_test extends advanced_testcase {
         }
     }
 
+    /**
+     * A failed button turn persists neither the button prompt nor a reply, so a
+     * button press whose AI turn fails does not strand the attempt or silently
+     * consume one of the button's uses.
+     */
+    public function test_failed_button_turn_persists_nothing(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('choiceretrylimit', 0, 'mod_aiescape');
+
+        $course = $this->getDataGenerator()->create_course();
+        $aiescape = $this->getDataGenerator()->create_module(
+            'aiescape',
+            ['course' => $course->id, 'gamemode' => 'multichoice']
+        );
+        $cm = get_coursemodule_from_instance('aiescape', $aiescape->id);
+        $cm->id = (int) $cm->id;
+        $user = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        /** @var \mod_aiescape_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_aiescape');
+        $attempt = $generator->create_attempt(['aiescape' => $aiescape->id, 'userid' => $user->id]);
+
+        $buttonid = $DB->insert_record('aiescape_buttons', (object) [
+            'aiescape'     => $aiescape->id,
+            'label'        => 'Hint',
+            'prompt'       => 'Give a hint.',
+            'sortorder'    => 0,
+            'defaultindex' => null,
+            'usagelimit'   => 2,
+        ]);
+
+        \core\di::set(\core_ai\manager::class, $this->fake_failing_ai_manager());
+        $this->setUser($user);
+
+        try {
+            trigger_button::execute($cm->id, $attempt->id, (int) $buttonid);
+            $this->fail('Expected error:aifailed to be thrown');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('aifailed', $e->errorcode);
+        }
+
+        $this->assertCount(
+            0,
+            (new attempt_manager())->get_attempt_messages($attempt->id),
+            'A failed button turn must not record the button prompt.'
+        );
+    }
+
     #[\Override]
     protected function tearDown(): void {
         // Undo any \core_ai\manager DI override so it doesn't leak into other tests.

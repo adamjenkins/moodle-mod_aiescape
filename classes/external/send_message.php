@@ -145,18 +145,35 @@ class send_message extends external_api {
             throw new \moodle_exception('error:invalidchoice', 'mod_aiescape');
         }
 
-        // Record the student's message.
-        $messageid = $atman->record_message($attemptid, 'user', $usermessagetext, $matchedtype, $presetchange);
+        // A submission is a genuine student turn only when it carries a choice or
+        // free text; an empty message is the opening/refresh request that just asks
+        // the AI to (re)generate the current turn's narrative and choices.
+        $hasuserturn = ($choicelabel !== '' || trim($message) !== '');
 
-        // Flag the message for teacher review if it matches a configured keyword.
-        // Only applies to free-typed responses (not fixed multichoice button labels).
-        if ($choicelabel === '' && $aiescape->gamemode !== 'multichoice' && !empty($aiescape->flagkeywords)) {
-            $atman->flag_message_if_matched($messageid, $attemptid, $usermessagetext, $aiescape->flagkeywords);
+        // Build the AI prompt from the stored history plus the pending user turn,
+        // WITHOUT persisting anything yet. If the AI call fails, nothing is written,
+        // so the attempt is never left with an orphan user message that would strand
+        // it (a multichoice attempt with a trailing user message has no way to act).
+        $messages = $atman->get_attempt_messages($attemptid);
+        if ($hasuserturn) {
+            $messages[] = (object) [
+                'role'    => 'user',
+                'message' => $usermessagetext,
+            ];
         }
 
-        // Build and send the AI prompt.
-        $messages = $atman->get_attempt_messages($attemptid);
-        $result   = $atman->run_ai_turn($aiescape, $context, $USER->id, $messages, (int) $attempt->stepstally);
+        $result = $atman->run_ai_turn($aiescape, $context, $USER->id, $messages, (int) $attempt->stepstally);
+
+        // The AI turn succeeded: now it is safe to persist the student's message.
+        if ($hasuserturn) {
+            $messageid = $atman->record_message($attemptid, 'user', $usermessagetext, $matchedtype, $presetchange);
+
+            // Flag the message for teacher review if it matches a configured keyword.
+            // Only applies to free-typed responses (not fixed multichoice button labels).
+            if ($choicelabel === '' && $aiescape->gamemode !== 'multichoice' && !empty($aiescape->flagkeywords)) {
+                $atman->flag_message_if_matched($messageid, $attemptid, $usermessagetext, $aiescape->flagkeywords);
+            }
+        }
 
         // Apply step change (prefer AI-evaluated for freetext; preset for choices).
         $stepchange = ($presetchange !== null) ? $presetchange : $result['stepchange'];

@@ -96,15 +96,23 @@ class trigger_button extends external_api {
             throw new \moodle_exception('error:buttonlimitreached', 'mod_aiescape');
         }
 
-        // Persist the button's instruction into the conversation history so it
-        // affects this turn and every subsequent turn for the rest of the attempt.
-        $atman->record_message($attemptid, 'user', $button->prompt, $button->label, null);
-        $messages = $atman->get_attempt_messages($attempt->id);
+        // Build the prompt with the button's instruction appended in-memory, without
+        // persisting it yet. If the AI call fails, nothing is written — so a failed
+        // button press neither strands the attempt with an orphan user message nor
+        // silently consumes one of the button's uses.
+        $messages[] = (object) [
+            'role'    => 'user',
+            'message' => $button->prompt,
+        ];
 
         $result = $atman->run_ai_turn($aiescape, $context, $USER->id, $messages, (int) $attempt->stepstally);
 
-        // Record the AI response without applying any step change.
+        // The AI turn succeeded: persist the button's instruction into the conversation
+        // history so it affects this turn and every subsequent turn for the rest of the
+        // attempt, then record the AI response without applying any step change.
+        $atman->record_message($attemptid, 'user', $button->prompt, $button->label, null);
         $atman->record_message($attemptid, 'assistant', $result['narrative'], null, null);
+        $messages = $atman->get_attempt_messages($attempt->id);
 
         $choices = in_array($aiescape->gamemode, ['multichoice', 'combo'], true) ? $result['choices'] : [];
 

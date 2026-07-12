@@ -65,4 +65,31 @@ trait fake_ai_manager_trait {
             }
         };
     }
+
+    /**
+     * Builds a fake \core_ai\manager whose process_action() always reports failure,
+     * mimicking an unreachable/erroring AI provider (which makes run_ai_turn throw
+     * error:aifailed).
+     *
+     * @return \core_ai\manager
+     */
+    private function fake_failing_ai_manager(): \core_ai\manager {
+        return new class extends \core_ai\manager {
+            /**
+             * Constructor (bypasses the parent's dependencies; the fake needs none).
+             */
+            public function __construct() {
+            }
+
+            #[\Override]
+            public function process_action(\core_ai\aiactions\base $action): \core_ai\aiactions\responses\response_base {
+                return new \core_ai\aiactions\responses\response_generate_text(
+                    success: false,
+                    errorcode: 1,
+                    error: 'error',
+                    errormessage: 'Simulated AI failure'
+                );
+            }
+        };
+    }
 }
