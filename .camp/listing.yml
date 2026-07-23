@@ -1,0 +1,18 @@
+# camp listing manifest — descriptive content for your plugin's page.
+# Edit freely and commit; camp ingests this file at each tagged release.
+# Schema: https://camp-registry.org/schema/listing.schema.json
+name: mod_aiescape
+summary: A Moodle activity plugin that creates an AI-driven interactive escape room experience. Students work through a scenario by making choices or typing free-text responses, guided by a large language mode
+description: |
+  Describe what the plugin does, in markdown (no raw HTML).
+labels:
+  # Required disclosure labels — pick all that apply (RFC §4.7):
+  #   fully-free | freemium | paid-service | external-account
+  #   donation-supported | commercial-support-available
+  - fully-free
+# screenshots:
+#   - path: .camp/screenshots/overview.png
+#     caption: Main view
+# links:
+#   docs: https://…
+#   issues: https://…
