@@ -2,9 +2,15 @@
 # Edit freely and commit; camp ingests this file at each tagged release.
 # Schema: https://camp-registry.org/schema/listing.schema.json
 name: mod_aiescape
-summary: A Moodle activity plugin that creates an AI-driven interactive escape room experience. Students work through a scenario by making choices or typing free-text responses, guided by a large language mode
+summary: 'An activity that creates an AI-driven interactive escape room — students work through a scenario by making choices or typing free-text responses, guided by an LLM via Moodle''s core_ai subsystem.'
 description: |
-  Describe what the plugin does, in markdown (no raw HTML).
+  Students progress through an AI-narrated escape-room scenario by choosing
+  options or writing free-text answers, guided by a large language model via
+  Moodle's `core_ai` subsystem. Choice submissions are validated server-side
+  against the exact set the AI offered — the good/neutral/bad classification
+  never leaves the server — so grades cannot be forged through direct
+  web-service calls. Free-text scoring is AI-evaluated and advisory, best
+  suited to formative, low-stakes use.
 labels:
   # Required disclosure labels — pick all that apply (RFC §4.7):
   #   fully-free | freemium | paid-service | external-account
