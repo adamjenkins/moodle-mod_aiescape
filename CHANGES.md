@@ -1,25 +1,5 @@
-## [1.1.1] - 2026-07-12
-
-### Security
-
-- **Choice classifications no longer reach the browser** (self grade-inflation hardening, MDL Shield finding): `send_message` and `trigger_button` now return only each choice's label plus an `isfreeturn` marker. Choices are shuffled server-side, since the parser's good-first grouping would otherwise reveal the classification by array position alone. The client submits only the selected label, and the server resolves the good/neutral/bad step delta from the offered set it stored for that turn; choice sets with duplicate labels are rejected and re-requested from the AI so a label always identifies exactly one choice. The preview hover-hints feature still receives the types, but only for users with `mod/aiescape:viewreports` on activities where it is enabled.
-- **Multiple-choice mode now rejects free-typed text** sent directly to the web service, closing an unintended path to AI-evaluated (prompt-injectable) scoring in choice-only activities.
+## [1.1.2] - 2026-08-22
 
 ### Fixed
 
-- **Scale grades are rejected in the activity settings** with a clear validation message instead of silently creating a broken gradebook column with a negative maximum (the grading code supports point grades only).
-- **Links in intro/premise/goal are decoded again on restore**: `define_decode_contents()` returned an empty array, so `view.php` self-links encoded during backup were left as `$@AIESCAPEVIEWBYID*…@$` tokens after restore.
-- **Attempts stranded by a failed AI turn now recover.** If an AI turn failed (for example, the provider was unreachable), the attempt could be left with an orphan user message and — in multiple-choice mode, which has no free-text input — no way to continue. A turn's messages are now persisted only after the AI call succeeds, so a failed turn leaves the tally and conversation untouched and can simply be retried; and resuming an attempt whose last message is the student's re-requests the interrupted turn, recovering attempts left stranded by earlier versions.
-
-### Changed
-
-- The teacher report fetches all attempts in one query instead of one query per student.
-- Documented that free-text/combo AI scoring is advisory and best suited to formative use (README, game mode help text).
-
-## [1.1.0] - 2026-07-11
-
-### Added
-
-- **Open and close dates** (Timing section in the activity settings), mimicking mod_quiz. The dates are surfaced through Moodle's activity-dates API, so "Opens:/Closes:" lines on the course page and activity page render identically to the quiz module. Students cannot start attempts, send messages, or trigger additional buttons outside the window; teachers/managers can preview at any time. Attempts still in progress at the close date are automatically abandoned — lazily when next accessed, and by a new scheduled task (`\mod_aiescape\task\abandon_expired_attempts`) — awarding a partial grade when "Award partial score on quit" is enabled. The new `timeopen`/`timeclose` fields are included in backup/restore, and a database upgrade step adds them to existing installations.
-- **Calendar events** for the open and close dates, matching mod_quiz: "… opens" / "… closes" events appear in the calendar and the timeline block (with a "Start Game" action for students who can still play), dragging an event in the calendar updates the activity dates within a validated range, and `aiescape_refresh_events()` supports course restore and the "Refresh calendar events" tool.
-- **Progress images** (ported from mod_quizquest): teachers can upload multiple images that display alongside the conversation; with N images (ordered by file name), each subsequent image appears as the student completes an equal share of the required steps. Images are served through the standard pluginfile API and included in backup/restore.
+- **Database schema realigned for sites that installed 1.0.0.** The 1.0.0 `db/install.xml` declared `personaname` as `CHAR NOT NULL` with an empty string as its default — a combination XMLDB rejects, silently dropping the default and logging "XMLDB has detected one CHAR NOT NULL column (personaname) with '' (empty string) as DEFAULT value" every time the file is parsed. The XML itself was corrected in 1.0.1, but nothing realigned databases already created from the 1.0.0 definition, so those sites keep a `NOT NULL` column that permanently mismatches `install.xml` under Site administration ▸ Development ▸ Check database schema. An upgrade step now makes the column nullable, matching `install.xml`. Sites that upgraded to 1.0.0 rather than installing it fresh were never affected, and no stored data changes.

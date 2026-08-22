@@ -247,5 +247,21 @@ function xmldb_aiescape_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026071100, 'aiescape');
     }
 
+    if ($oldversion < 2026082200) {
+        // The 1.0.0 install.xml declared personaname as CHAR NOT NULL with an empty
+        // string as DEFAULT. XMLDB rejects that combination and silently drops the
+        // default, so sites that installed 1.0.0 ended up with a NOT NULL column with
+        // no default, while install.xml (corrected in 1.0.1) declares it nullable.
+        // Realign those installs so the schema check reports no differences.
+        $table = new xmldb_table('aiescape');
+        $field = new xmldb_field('personaname', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'gamestyle');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->change_field_notnull($table, $field);
+            $dbman->change_field_default($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026082200, 'aiescape');
+    }
+
     return true;
 }
