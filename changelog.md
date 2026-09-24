@@ -2,6 +2,12 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
+## [1.1.3] - 2026-09-24
+
+### Changed
+
+- **Releases are now published to Moodle Marketplace automatically.** A new GitHub Actions workflow (`.github/workflows/moodle-release.yml`) submits each tagged version to Moodle Marketplace. This release makes no changes to the plugin's code or database. It re-publishes the 1.1.2 fix below, which never reached Marketplace because the release workflow had been retired before 1.1.2 was tagged.
+
 ## [1.1.2] - 2026-08-22
 
 ### Fixed
