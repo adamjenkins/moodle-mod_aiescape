@@ -2,6 +2,12 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Declare Moodle 5.3 support.
+
 ## [1.1.3] - 2026-09-24
 
 ### Changed
