@@ -2,7 +2,7 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
-## [Unreleased]
+## [1.1.4] - 2026-10-03
 
 ### Changed
 
