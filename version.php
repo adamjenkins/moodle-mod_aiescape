@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version metadata for mod_ai_escape_room.
+ * Plugin version metadata for mod_aiescape.
  *
  * @package    mod_aiescape
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>

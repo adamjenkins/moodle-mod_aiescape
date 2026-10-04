@@ -101,6 +101,7 @@ class provider implements
                   FROM {aiescape_attempts} aa
                   JOIN {aiescape} a ON a.id = aa.aiescape
                   JOIN {course_modules} cm ON cm.instance = a.id
+                  JOIN {modules} m ON m.id = cm.module AND m.name = 'aiescape'
                  WHERE cm.id = :cmid";
         $userlist->add_from_sql('userid', $sql, ['cmid' => $context->instanceid]);
     }
@@ -124,7 +125,10 @@ class provider implements
                 continue;
             }
 
-            $cm       = get_coursemodule_from_id('aiescape', $context->instanceid);
+            $cm = get_coursemodule_from_id('aiescape', $context->instanceid);
+            if (!$cm) {
+                continue;
+            }
             $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance]);
             $attempts = $DB->get_records('aiescape_attempts', ['aiescape' => $aiescape->id, 'userid' => $userid]);
 
@@ -165,7 +169,10 @@ class provider implements
             return;
         }
 
-        $cm       = get_coursemodule_from_id('aiescape', $context->instanceid);
+        $cm = get_coursemodule_from_id('aiescape', $context->instanceid);
+        if (!$cm) {
+            return;
+        }
         $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance]);
 
         if (!$aiescape) {
@@ -196,7 +203,10 @@ class provider implements
                 continue;
             }
 
-            $cm       = get_coursemodule_from_id('aiescape', $context->instanceid);
+            $cm = get_coursemodule_from_id('aiescape', $context->instanceid);
+            if (!$cm) {
+                continue;
+            }
             $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance]);
             if (!$aiescape) {
                 continue;
@@ -230,7 +240,10 @@ class provider implements
             return;
         }
 
-        $cm       = get_coursemodule_from_id('aiescape', $context->instanceid);
+        $cm = get_coursemodule_from_id('aiescape', $context->instanceid);
+        if (!$cm) {
+            return;
+        }
         $aiescape = $DB->get_record('aiescape', ['id' => $cm->instance]);
         if (!$aiescape) {
             return;

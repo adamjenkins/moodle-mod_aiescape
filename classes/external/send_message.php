@@ -176,7 +176,14 @@ class send_message extends external_api {
         }
 
         // Apply step change (prefer AI-evaluated for freetext; preset for choices).
-        $stepchange = ($presetchange !== null) ? $presetchange : $result['stepchange'];
+        // An opening/refresh request carries no student turn, so it never scores:
+        // otherwise reloading the page would re-roll the AI's verdict on the last
+        // turn and could farm steps (or cost an honest student one).
+        if (!$hasuserturn) {
+            $stepchange = 0;
+        } else {
+            $stepchange = ($presetchange !== null) ? $presetchange : $result['stepchange'];
+        }
         if ($isfreeturn) {
             // The free turn is a fallback offered through no fault of the student's own;
             // it must never cost them progress, even if the AI evaluates it negatively.

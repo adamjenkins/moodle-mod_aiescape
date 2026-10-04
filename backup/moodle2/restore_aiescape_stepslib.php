@@ -66,6 +66,9 @@ class restore_aiescape_activity_structure_step extends restore_activity_structur
         $data->course     = $this->get_courseid();
         $data->timemodified = $this->apply_date_offset($data->timemodified);
         $data->timecreated  = $this->apply_date_offset($data->timecreated);
+        // Roll the open/close window with the course start date (0 = unset stays 0).
+        $data->timeopen     = $this->apply_date_offset($data->timeopen ?? 0);
+        $data->timeclose    = $this->apply_date_offset($data->timeclose ?? 0);
 
         $newid = $DB->insert_record('aiescape', $data);
         $this->apply_activity_instance($newid);

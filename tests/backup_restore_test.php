@@ -201,4 +201,37 @@ final class backup_restore_test extends restore_date_testcase {
         $this->assertEquals('danger', $newflag->keyword);
         $this->assertEquals($newmessage->id, $newflag->messageid);
     }
+
+    /**
+     * The open/close dates move with the course start date on restore, and an
+     * unset date (0) stays unset.
+     */
+    public function test_backup_restore_shifts_open_and_close_dates(): void {
+        global $DB;
+
+        $timeopen  = $this->startdate + DAYSECS;
+        $timeclose = $this->startdate + 10 * DAYSECS;
+        [$course, $dated] = $this->create_course_and_module('aiescape', [
+            'name'      => 'Dated',
+            'timeopen'  => $timeopen,
+            'timeclose' => $timeclose,
+        ]);
+        $this->getDataGenerator()->create_module('aiescape', [
+            'course'    => $course->id,
+            'name'      => 'Undated',
+            'timeopen'  => 0,
+            'timeclose' => 0,
+        ]);
+
+        $newcourseid = $this->backup_and_restore($course);
+        $shift = $this->restorestartdate - $this->startdate;
+
+        $restored = $DB->get_record('aiescape', ['course' => $newcourseid, 'name' => 'Dated'], '*', MUST_EXIST);
+        $this->assertEquals($timeopen + $shift, $restored->timeopen);
+        $this->assertEquals($timeclose + $shift, $restored->timeclose);
+
+        $undated = $DB->get_record('aiescape', ['course' => $newcourseid, 'name' => 'Undated'], '*', MUST_EXIST);
+        $this->assertEquals(0, $undated->timeopen);
+        $this->assertEquals(0, $undated->timeclose);
+    }
 }

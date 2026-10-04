@@ -287,6 +287,54 @@ final class send_message_test extends advanced_testcase {
     }
 
     /**
+     * An empty refresh request (no message, no choice) never applies the AI's
+     * stepchange: reloading the page must neither farm steps toward completion
+     * nor cost an honest student progress.
+     *
+     * @param string $gamemode The activity's game mode
+     * @param int $aistepchange The stepchange the fake AI reports on the refresh
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('refresh_stepchange_provider')]
+    public function test_refresh_does_not_apply_ai_stepchange(string $gamemode, int $aistepchange): void {
+        global $DB;
+        $this->resetAfterTest();
+        // One step short of completion, so a scored refresh would also complete the attempt.
+        [$aiescape, $cm, $user, $attempt] = $this->setup_attempt(['gamemode' => $gamemode, 'steps' => 3]);
+        $DB->set_field('aiescape_attempts', 'stepstally', 2, ['id' => $attempt->id]);
+
+        $callcount = 0;
+        \core\di::set(\core_ai\manager::class, $this->fake_ai_manager([$this->valid_turn_json($aistepchange)], $callcount));
+        $this->setUser($user);
+
+        $result = send_message::execute($cm->id, $attempt->id, '', '');
+        $result = external_api::clean_returnvalue(send_message::execute_returns(), $result);
+
+        $this->assertSame(1, $callcount);
+        $this->assertSame(2, $result['tally']);
+        $this->assertSame(0, $result['stepchange']);
+        $this->assertFalse($result['completed']);
+        $stored = $DB->get_record('aiescape_attempts', ['id' => $attempt->id], '*', MUST_EXIST);
+        $this->assertEquals(2, $stored->stepstally);
+        $this->assertSame('inprogress', $stored->status);
+        $this->assertSame((int) $aiescape->id, (int) $stored->aiescape);
+    }
+
+    /**
+     * Game modes and AI stepchanges for the refresh test.
+     *
+     * @return array
+     */
+    public static function refresh_stepchange_provider(): array {
+        return [
+            'multichoice, AI says +1' => ['multichoice', 1],
+            'multichoice, AI says -1' => ['multichoice', -1],
+            'freetext, AI says +1'    => ['freetext', 1],
+            'combo, AI says +1'       => ['combo', 1],
+            'combo, AI says -1'       => ['combo', -1],
+        ];
+    }
+
+    /**
      * The fallback free turn is marked isfreeturn (that much is not secret — it is
      * the only choice offered) but carries no type field, and can never cost the
      * student a step even if the AI scores it negatively.

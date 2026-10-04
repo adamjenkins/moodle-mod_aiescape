@@ -2,6 +2,19 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Reloading the game no longer re-scores the last turn.** An opening/refresh request (empty message and no choice), which the game sends on every page load, used to apply whatever step change the AI returned. Repeated reloads could therefore add steps toward completion and the grade without the student choosing anything, or cost an honest student a step. Such a request now never changes the tally; only a choice or a typed answer scores.
+- **Open and close dates are shifted on restore and import.** `timeopen` and `timeclose` were backed up but restored unchanged, so an activity restored into a later course stayed closed for students. They now move with the course start date like other activity dates (unset dates stay unset).
+- **Course reset with a new start date now shifts the open and close dates**, as core activities do.
+- **Privacy provider: `get_users_in_context` is restricted to AI Escape Room contexts.** It joined course modules by instance id alone, so for another module's context whose instance id matched an aiescape id it reported that activity's users. The export and delete paths also return early instead of raising a PHP warning for a non-aiescape context.
+
+### Added
+
+- PHPUnit coverage for the privacy provider (metadata, contexts, users, export and all three delete paths), course reset, the `start_attempt` and `quit_attempt` web services, restored open/close dates, and refresh requests that must not score.
+
 ## [1.1.4] - 2026-10-03
 
 ### Changed

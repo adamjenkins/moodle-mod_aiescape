@@ -536,6 +536,17 @@ function aiescape_reset_userdata($data) {
         ];
     }
 
+    // Roll the open/close dates with the course start date (the shift may be negative).
+    // Core does not do this generically; each module shifts its own date fields.
+    if (!empty($data->timeshift)) {
+        shift_course_mod_dates('aiescape', ['timeopen', 'timeclose'], $data->timeshift, $data->courseid);
+        $status[] = [
+            'component' => get_string('modulenameplural', 'mod_aiescape'),
+            'item'      => get_string('datechanged'),
+            'error'     => false,
+        ];
+    }
+
     return $status;
 }
 
