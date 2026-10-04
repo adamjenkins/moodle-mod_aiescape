@@ -2,7 +2,7 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
-## [Unreleased]
+## [1.1.5] - 2026-10-04
 
 ### Fixed
 
@@ -14,6 +14,11 @@ All notable changes to `mod_aiescape` are documented in this file.
 ### Added
 
 - PHPUnit coverage for the privacy provider (metadata, contexts, users, export and all three delete paths), course reset, the `start_attempt` and `quit_attempt` web services, restored open/close dates, and refresh requests that must not score.
+
+### Changed
+
+- CI now tests against the released Moodle 5.3 (`MOODLE_503_STABLE`, blocking) instead of non-blocking moodle.git `main` jobs.
+- The camp release workflow now calls the maintained `camp-registry/camp-workflows` release workflow (`release.yml@v1`), replacing a copied template that pinned an old camp-tools release and needed a `CAMP_INDEX_TOKEN` secret (the 1.1.4 camp publish failed at that step). It publishes with GitHub's OIDC token.
 
 ## [1.1.4] - 2026-10-03
 
