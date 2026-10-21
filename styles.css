@@ -82,18 +82,18 @@ body.path-mod-aiescape [role="main"] > * {
 }
 
 .aiescape-choicecounts .aiescape-count-good {
-    background-color: #d1e7dd;
-    color: #0a3622;
+    background-color: var(--mds-bg-feedback-success-subtle, var(--bs-success-bg-subtle, #d1e7dd));
+    color: var(--mds-text-feedback-success, var(--bs-success-text-emphasis, #0a3622));
 }
 
 .aiescape-choicecounts .aiescape-count-neutral {
-    background-color: #e2e3e5;
-    color: #41464b;
+    background-color: var(--mds-bg-feedback-secondary-subtle, var(--bs-secondary-bg-subtle, #e2e3e5));
+    color: var(--mds-text-feedback-secondary, var(--bs-secondary-text-emphasis, #41464b));
 }
 
 .aiescape-choicecounts .aiescape-count-bad {
-    background-color: #f8d7da;
-    color: #58151c;
+    background-color: var(--mds-bg-feedback-danger-subtle, var(--bs-danger-bg-subtle, #f8d7da));
+    color: var(--mds-text-feedback-danger, var(--bs-danger-text-emphasis, #58151c));
 }
 
 /* Preview-only hover hints revealing each choice's good/neutral/bad type. */
