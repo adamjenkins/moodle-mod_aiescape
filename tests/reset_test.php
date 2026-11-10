@@ -89,7 +89,7 @@ final class reset_test extends advanced_testcase {
         $this->assertEquals($timeclose, $row->timeclose);
 
         $items = array_column($status, 'item');
-        $this->assertContains(get_string('datechanged'), $items);
+        $this->assertContains(get_string('resetdatesshifted', 'mod_aiescape'), $items);
         // Attempts were not requested for reset, so they remain.
         $this->assertEquals(2, $DB->count_records('aiescape_attempts'));
     }

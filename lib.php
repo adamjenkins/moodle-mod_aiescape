@@ -447,9 +447,12 @@ function aiescape_get_user_grades($aiescape, $userid = 0) {
         $where  = 'aiescape = :aiescape AND status = :status AND ispreview = 0' . ($userid ? ' AND userid = :userid' : '');
         $abandoned = $DB->get_records_select('aiescape_attempts', $where, $params, 'timecompleted ASC');
 
+        // Users with a completed attempt keep the full grade; only they are skipped.
+        $completeduserids = array_flip(array_keys($grades));
+
         foreach ($abandoned as $attempt) {
             // Only apply partial if user has no completed attempt (full grade wins).
-            if (isset($grades[$attempt->userid])) {
+            if (isset($completeduserids[$attempt->userid])) {
                 continue;
             }
             $partial = (float) $aiescape->grade
@@ -542,7 +545,7 @@ function aiescape_reset_userdata($data) {
         shift_course_mod_dates('aiescape', ['timeopen', 'timeclose'], $data->timeshift, $data->courseid);
         $status[] = [
             'component' => get_string('modulenameplural', 'mod_aiescape'),
-            'item'      => get_string('datechanged'),
+            'item'      => get_string('resetdatesshifted', 'mod_aiescape'),
             'error'     => false,
         ];
     }

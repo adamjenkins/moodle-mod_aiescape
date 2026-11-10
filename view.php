@@ -54,7 +54,8 @@ $PAGE->set_context($context);
 
 echo $OUTPUT->header();
 echo html_writer::start_div('aiescape-page');
-echo $OUTPUT->heading(format_string($aiescape->name), 2);
+// No activity-name heading here: core's activity header inside
+// $OUTPUT->header() already shows the activity name.
 
 // Note: the activity description is already rendered once by core's activity
 // header inside $OUTPUT->header() above; do not print $aiescape->intro again here.

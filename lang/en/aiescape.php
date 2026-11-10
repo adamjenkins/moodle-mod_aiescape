@@ -185,6 +185,7 @@ $string['quitattempt_confirm'] = 'Are you sure you want to quit? This attempt wi
 $string['report'] = 'Attempts report';
 $string['reportheading'] = 'Attempt report: {$a}';
 $string['resetattempts'] = 'Delete all AI Escape Room attempts';
+$string['resetdatesshifted'] = 'Open and close dates shifted';
 $string['resumegame'] = 'Continue';
 $string['scenariosettings'] = 'Scenario';
 $string['sendmessage'] = 'Send';
