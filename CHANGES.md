@@ -1,13 +1,12 @@
-## [1.1.5] - 2026-10-04
+## [1.1.6] - 2026-11-10
 
 ### Fixed
 
-- Reloading the game no longer changes the step tally: an opening or refresh request (no choice and no typed text) never applies the AI's step change, so only a choice or a typed answer scores.
-- Backup/restore and course import now shift the open and close dates with the course start date, so a restored activity no longer stays closed to students.
-- Course reset with a new start date now shifts the open and close dates.
-- Privacy API: `get_users_in_context` no longer reports AI Escape Room users for other modules' contexts that share an instance id.
+- With "Award partial score on quit" on, a student who quit several attempts now gets the highest of their partial grades. Previously only their earliest quit attempt counted, even if a later one got further.
+- The activity name is no longer shown twice at the top of the activity page.
+- The course reset report no longer uses a core string that is deprecated in Moodle 5.2; it now says "Open and close dates shifted".
 
 ### Changed
 
-- Automated tests now run against the released Moodle 5.3 (MOODLE_503_STABLE) instead of Moodle's development branch.
-- The release workflow that publishes to the camp plugin registry now uses the maintained shared workflow.
+- The game's colours for good, neutral and bad choice counts follow the Moodle theme's colours, so they also suit Moodle 5.3's dark colour mode. Other themes and older Moodle versions look as before.
+- The game's JavaScript was modernised; its behaviour is unchanged.

@@ -2,6 +2,19 @@
 
 All notable changes to `mod_aiescape` are documented in this file.
 
+## [1.1.6] - 2026-11-10
+
+### Fixed
+
+- **Highest partial grade kept across abandoned attempts.** In `aiescape_get_user_grades()` the abandoned-attempt loop skipped any user already in `$grades`, which included users given a partial grade by an earlier iteration, so only the first abandoned attempt (by `timecompleted`) counted. It now skips only users with a completed attempt (`$completeduserids`) and keeps the highest partial grade. New `tests/user_grades_test.php`.
+- **Course reset status string.** `aiescape_reset_userdata()` reported the date shift with core's `datechanged`, deprecated in Moodle 5.2; it now uses the new plugin string `resetdatesshifted` ("Open and close dates shifted"). `tests/reset_test.php` updated.
+- **Duplicate heading.** `view.php` no longer prints `format_string($aiescape->name)` as a heading under core's activity header, which already shows the activity name.
+
+### Changed
+
+- `amd/src/game.js` converted from a `define()` AMD module to ES6 `import`/`export` syntax (`export const init`); behaviour unchanged. `amd/build` rebuilt.
+- `styles.css`: the good, neutral and bad choice-count colours use the Moodle Design System tokens (`--mds-bg-feedback-*-subtle`, `--mds-text-feedback-*`), falling back to the Bootstrap variables (`--bs-*-bg-subtle`, `--bs-*-text-emphasis`) and then the previous fixed colours, so they follow Moodle 5.3's dark colour mode.
+
 ## [1.1.5] - 2026-10-04
 
 ### Fixed
